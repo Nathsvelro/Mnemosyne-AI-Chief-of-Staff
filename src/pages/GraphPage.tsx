@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { KnowledgeGraph, GraphNode } from "@/components/graph/KnowledgeGraph";
+import { WorkflowAgentPanel } from "@/components/workflow/WorkflowAgentPanel";
+import { HistoricalTimeline } from "@/components/history/HistoricalTimeline";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -14,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Users, Briefcase, Target, FileText, FileCode, AlertTriangle, Plus, ExternalLink, MessageSquare, GitBranch, Clock, Zap, Focus } from "lucide-react";
+import { X, Users, Briefcase, Target, FileText, FileCode, AlertTriangle, Plus, ExternalLink, MessageSquare, GitBranch, Clock, Zap, Focus, Bot, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EntityType } from "@/types/database";
 
@@ -92,6 +94,7 @@ const GraphPage = () => {
   const [activeTab, setActiveTab] = useState<"flow" | "bottlenecks" | "diff">("flow");
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [centerNodeId, setCenterNodeId] = useState<string | null>(null);
+  const [rightPanelTab, setRightPanelTab] = useState<"inspector" | "workflow" | "history">("inspector");
 
   const toggleNodeType = (type: EntityType) => {
     setNodeFilters(prev => ({ ...prev, [type]: !prev[type] }));
@@ -370,38 +373,62 @@ const GraphPage = () => {
           </div>
         </div>
 
-        {/* Right Drawer: Node Inspector */}
-        {selectedNode && (
-          <div className="w-80 shrink-0 bg-card rounded-xl border border-border overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="p-4 border-b border-border bg-gradient-card flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
-                {(() => {
-                  const Icon = nodeTypeConfig[selectedNode.type].icon;
-                  return <Icon className={cn("w-5 h-5 shrink-0", nodeTypeConfig[selectedNode.type].color)} />;
-                })()}
-                <span className="font-semibold text-foreground text-sm truncate">{selectedNode.label}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7 shrink-0"
-                  onClick={() => handleCenterOnNode(selectedNode.id)}
-                  title="Focus graph on this node"
-                >
-                  <Focus className={cn("w-4 h-4", centerNodeId === selectedNode.id ? "text-primary" : "")} />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7 shrink-0"
-                  onClick={() => setSelectedNode(null)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+        {/* Right Panel: Multi-Tab Inspector/Agent/History */}
+        <div className="w-80 shrink-0 flex flex-col bg-card rounded-xl border border-border overflow-hidden">
+          {/* Right Panel Tabs */}
+          <div className="p-2 border-b border-border">
+            <Tabs value={rightPanelTab} onValueChange={(v) => setRightPanelTab(v as typeof rightPanelTab)}>
+              <TabsList className="w-full">
+                <TabsTrigger value="inspector" className="flex-1 gap-1 text-xs">
+                  <Focus className="w-3 h-3" />
+                  Inspector
+                </TabsTrigger>
+                <TabsTrigger value="workflow" className="flex-1 gap-1 text-xs">
+                  <Bot className="w-3 h-3" />
+                  Agent
+                </TabsTrigger>
+                <TabsTrigger value="history" className="flex-1 gap-1 text-xs">
+                  <History className="w-3 h-3" />
+                  History
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Inspector Tab Content */}
+          {rightPanelTab === "inspector" && (
+            <>
+              {selectedNode ? (
+                <>
+                  {/* Header */}
+                  <div className="p-4 border-b border-border bg-gradient-card flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {(() => {
+                        const Icon = nodeTypeConfig[selectedNode.type].icon;
+                        return <Icon className={cn("w-5 h-5 shrink-0", nodeTypeConfig[selectedNode.type].color)} />;
+                      })()}
+                      <span className="font-semibold text-foreground text-sm truncate">{selectedNode.label}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => handleCenterOnNode(selectedNode.id)}
+                        title="Focus graph on this node"
+                      >
+                        <Focus className={cn("w-4 h-4", centerNodeId === selectedNode.id ? "text-primary" : "")} />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => setSelectedNode(null)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
 
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-4">
@@ -558,8 +585,36 @@ const GraphPage = () => {
                 </div>
               </div>
             </ScrollArea>
-          </div>
-        )}
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                  <Focus className="w-12 h-12 text-muted-foreground/30 mb-3" />
+                  <h3 className="font-medium text-foreground mb-1">No node selected</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Click on a node in the graph to inspect its details, relationships, and AI insights.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Workflow Agent Tab Content */}
+          {rightPanelTab === "workflow" && (
+            <WorkflowAgentPanel 
+              className="flex-1" 
+              onNavigateToNode={(nodeId) => setCenterNodeId(nodeId)}
+            />
+          )}
+
+          {/* History Tab Content */}
+          {rightPanelTab === "history" && (
+            <HistoricalTimeline 
+              className="flex-1 border-0 rounded-none"
+              entityFilter={selectedNode?.id}
+              onNavigateToEntity={(entityId) => setCenterNodeId(entityId)}
+            />
+          )}
+        </div>
       </div>
     </AppLayout>
   );
