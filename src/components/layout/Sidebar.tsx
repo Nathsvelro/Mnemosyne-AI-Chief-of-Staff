@@ -24,11 +24,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { icon: Home, label: "Org Pulse", href: "/home" },
-  { icon: Share2, label: "Graph", href: "/graph" },
+  { icon: Share2, label: "Knowledge Graph", href: "/" },
+  { icon: Home, label: "Org Pulse", href: "/pulse" },
   { icon: GitBranch, label: "Decision Log", href: "/decisions" },
   { icon: Activity, label: "Updates", href: "/updates" },
   { icon: Inbox, label: "Inbox", href: "/inbox", badge: "3" },
+  { icon: Sparkles, label: "Innovation", href: "/innovation" },
 ];
 
 export function Sidebar() {
