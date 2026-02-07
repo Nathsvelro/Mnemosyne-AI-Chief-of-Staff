@@ -2,15 +2,15 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Network,
-  FileText,
-  RefreshCw,
+  Home,
+  Share2,
+  GitBranch,
+  Activity,
   Inbox,
   Settings,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
+  Brain,
 } from "lucide-react";
 
 interface NavItem {
@@ -21,10 +21,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Org Pulse", href: "/" },
-  { icon: Network, label: "Knowledge Graph", href: "/graph" },
-  { icon: FileText, label: "Decision Log", href: "/decisions" },
-  { icon: RefreshCw, label: "Updates", href: "/updates" },
+  { icon: Home, label: "Org Pulse", href: "/home" },
+  { icon: Share2, label: "Graph", href: "/graph" },
+  { icon: GitBranch, label: "Decision Log", href: "/decisions" },
+  { icon: Activity, label: "Updates", href: "/updates" },
   { icon: Inbox, label: "Inbox", href: "/inbox", badge: "3" },
 ];
 
@@ -43,13 +43,13 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
         <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-primary shadow-glow">
-          <Sparkles className="w-5 h-5 text-primary-foreground" />
+          <Brain className="w-5 h-5 text-primary-foreground" />
         </div>
         {!collapsed && (
           <div className="flex flex-col">
-            <span className="font-semibold text-foreground text-sm">Superhuman</span>
+            <span className="font-semibold text-foreground text-sm">Mnemosyne</span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              AI Chief of Staff
+              Org Intelligence OS
             </span>
           </div>
         )}

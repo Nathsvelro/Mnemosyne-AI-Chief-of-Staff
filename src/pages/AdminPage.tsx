@@ -47,10 +47,11 @@ const rolesConfig = [
 
 const AdminPage = () => {
   const { toast } = useToast();
-  const [orgName, setOrgName] = useState("Acme Corp");
+  const [orgName, setOrgName] = useState("Nathaniel Velazquez Company");
   const [ceoName, setCeoName] = useState("Nathaniel Velazquez");
-  const [ceoViewEnabled, setCeoViewEnabled] = useState(false);
+  const [ceoViewEnabled, setCeoViewEnabled] = useState(true);
   const [retentionDays, setRetentionDays] = useState("90");
+  const [ceoDigestFrequency, setCeoDigestFrequency] = useState("daily");
 
   const handleSave = () => {
     toast({
@@ -77,12 +78,12 @@ const AdminPage = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="connectors" className="space-y-6">
+        <Tabs defaultValue="company" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="connectors">Data Sources</TabsTrigger>
-            <TabsTrigger value="roles">Permissions</TabsTrigger>
-            <TabsTrigger value="routing">Routing Rules</TabsTrigger>
-            <TabsTrigger value="retention">Data Policy</TabsTrigger>
+            <TabsTrigger value="company">Company</TabsTrigger>
+            <TabsTrigger value="connectors">Connectors</TabsTrigger>
+            <TabsTrigger value="policies">Policies</TabsTrigger>
+            <TabsTrigger value="retention">Retention</TabsTrigger>
             <TabsTrigger value="ceo">CEO View</TabsTrigger>
           </TabsList>
 
