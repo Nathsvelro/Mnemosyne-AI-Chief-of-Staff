@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Network,
-  Clock,
-  Brain,
-  Users,
+  FileText,
+  RefreshCw,
+  Inbox,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -20,20 +21,17 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+  { icon: LayoutDashboard, label: "Org Pulse", href: "/" },
   { icon: Network, label: "Knowledge Graph", href: "/graph" },
-  { icon: Clock, label: "Timeline", href: "/timeline" },
-  { icon: Brain, label: "AI Reasoning", href: "/reasoning" },
-  { icon: Users, label: "Stakeholders", href: "/stakeholders" },
+  { icon: FileText, label: "Decision Log", href: "/decisions" },
+  { icon: RefreshCw, label: "Updates", href: "/updates" },
+  { icon: Inbox, label: "Inbox", href: "/inbox", badge: "3" },
 ];
 
-interface SidebarProps {
-  activeRoute?: string;
-  onNavigate?: (route: string) => void;
-}
-
-export function Sidebar({ activeRoute = "/", onNavigate }: SidebarProps) {
+export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <aside
@@ -61,12 +59,12 @@ export function Sidebar({ activeRoute = "/", onNavigate }: SidebarProps) {
       <nav className="flex-1 py-4 px-2 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeRoute === item.href;
+          const isActive = location.pathname === item.href;
           
           return (
             <button
               key={item.href}
-              onClick={() => onNavigate?.(item.href)}
+              onClick={() => navigate(item.href)}
               className={cn(
                 "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all duration-200 group",
                 isActive
@@ -109,11 +107,16 @@ export function Sidebar({ activeRoute = "/", onNavigate }: SidebarProps) {
       {/* Footer */}
       <div className="border-t border-sidebar-border p-2">
         <button
-          onClick={() => onNavigate?.("/settings")}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          onClick={() => navigate("/admin")}
+          className={cn(
+            "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors",
+            location.pathname === "/admin"
+              ? "bg-sidebar-accent text-sidebar-primary"
+              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          )}
         >
           <Settings className="w-5 h-5 shrink-0 text-muted-foreground" />
-          {!collapsed && <span className="text-sm font-medium">Settings</span>}
+          {!collapsed && <span className="text-sm font-medium">Admin</span>}
         </button>
         
         <button

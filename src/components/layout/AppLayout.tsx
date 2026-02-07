@@ -1,6 +1,6 @@
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
-import { Header } from "./Header";
+import { TopBar } from "./TopBar";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -8,14 +8,12 @@ interface AppLayoutProps {
   subtitle?: string;
 }
 
-export function AppLayout({ children, title, subtitle }: AppLayoutProps) {
-  const [activeRoute, setActiveRoute] = useState("/");
-
+export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <Sidebar activeRoute={activeRoute} onNavigate={setActiveRoute} />
+      <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title={title} subtitle={subtitle} />
+        <TopBar />
         <main className="flex-1 overflow-auto p-6">
           {children}
         </main>

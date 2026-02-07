@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import type { EntityType } from "@/types/database";
 
 export interface GraphNode {
   id: string;
   label: string;
-  type: "person" | "team" | "decision" | "topic" | "dependency";
+  type: EntityType;
   x?: number;
   y?: number;
   connections?: string[];
@@ -22,30 +23,30 @@ interface KnowledgeGraphProps {
 }
 
 const defaultNodes: GraphNode[] = [
-  { id: "1", label: "Sarah Chen", type: "person", connections: ["2", "4", "6"], metadata: { role: "CEO" } },
+  { id: "1", label: "Sarah Chen", type: "person", connections: ["2", "4", "6"], metadata: { role: "VP Engineering" } },
   { id: "2", label: "Product Team", type: "team", connections: ["1", "3", "5"] },
-  { id: "3", label: "Q2 Roadmap", type: "decision", connections: ["2", "4"], metadata: { status: "active" } },
+  { id: "3", label: "Q1 Launch", type: "decision", connections: ["2", "4"], metadata: { status: "active" } },
   { id: "4", label: "AI Strategy", type: "topic", connections: ["1", "3", "5", "6"] },
   { id: "5", label: "Engineering", type: "team", connections: ["2", "4", "7"] },
-  { id: "6", label: "Marcus Johnson", type: "person", connections: ["1", "4"], metadata: { role: "CTO" } },
-  { id: "7", label: "Tech Debt", type: "dependency", connections: ["5"], metadata: { status: "pending" } },
+  { id: "6", label: "Marcus Johnson", type: "person", connections: ["1", "4"], metadata: { role: "Head of Product" } },
+  { id: "7", label: "API Docs", type: "document", connections: ["5"], metadata: { status: "pending" } },
   { id: "8", label: "Budget Approval", type: "decision", connections: ["1", "3"], metadata: { status: "resolved" } },
 ];
 
-const nodeColors: Record<GraphNode["type"], string> = {
+const nodeColors: Record<EntityType, string> = {
   person: "var(--node-person)",
   team: "var(--node-team)",
   decision: "var(--node-decision)",
   topic: "var(--node-topic)",
-  dependency: "var(--node-dependency)",
+  document: "var(--node-dependency)",
 };
 
-const nodeLabels: Record<GraphNode["type"], string> = {
+const nodeLabels: Record<EntityType, string> = {
   person: "Person",
   team: "Team",
   decision: "Decision",
   topic: "Topic",
-  dependency: "Dependency",
+  document: "Document",
 };
 
 export function KnowledgeGraph({
