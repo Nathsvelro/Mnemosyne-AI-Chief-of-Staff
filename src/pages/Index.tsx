@@ -1,7 +1,7 @@
-import Dashboard from "./Dashboard";
+import OrgPulse from "./OrgPulse";
 
 const Index = () => {
-  return <Dashboard />;
+  return <OrgPulse />;
 };
 
 export default Index;
