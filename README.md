@@ -1,6 +1,6 @@
 # 🧠 Mnemosyne — Organizational Intelligence OS
 
-[Insert logo here]
+![Local image](./images/Mnemosyne.png)
 
 **Mnemosyne** is an **AI-powered Organizational Intelligence Operating System** designed to become the *memory, filter, and coordination layer* of a company.
 
