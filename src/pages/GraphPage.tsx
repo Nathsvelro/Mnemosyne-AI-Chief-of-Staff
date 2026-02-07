@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { KnowledgeGraph } from "@/components/graph/KnowledgeGraph";
+import { KnowledgeGraph, GraphNode } from "@/components/graph/KnowledgeGraph";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Select,
   SelectContent,
@@ -13,15 +14,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Users, Briefcase, Target, FileText, FileCode, AlertTriangle, Minus, Plus } from "lucide-react";
+import { X, Users, Briefcase, Target, FileText, FileCode, AlertTriangle, Minus, Plus, ExternalLink, MessageSquare, GitBranch, Clock, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EntityType } from "@/types/database";
-import { mockPersons, mockTeams, mockTopics, mockDecisions, mockDocuments } from "@/lib/mock-data";
 
 interface SelectedNode {
   id: string;
   type: EntityType;
   label: string;
+  metadata?: {
+    role?: string;
+    status?: "active" | "pending" | "resolved";
+    loadScore?: number;
+    confidence?: number;
+    description?: string;
+  };
+  connections?: string[];
 }
 
 const nodeTypeConfig: Record<EntityType, { icon: typeof Users; label: string; color: string }> = {
@@ -31,6 +39,31 @@ const nodeTypeConfig: Record<EntityType, { icon: typeof Users; label: string; co
   decision: { icon: FileText, label: "Decisions", color: "text-success" },
   document: { icon: FileCode, label: "Documents", color: "text-info" },
 };
+
+// Mock teams for filter dropdown
+const mockTeams = [
+  { id: "team-exec", name: "Executive" },
+  { id: "team-eng", name: "Engineering" },
+  { id: "team-prod", name: "Product" },
+  { id: "team-design", name: "Design" },
+  { id: "team-mktg", name: "Marketing" },
+  { id: "team-sales", name: "Sales" },
+  { id: "team-platform", name: "Platform" },
+];
+
+// Related decisions mock
+const relatedDecisions = [
+  { id: "d1", title: "Adopt Next.js for frontend", status: "confirmed", confidence: 0.92 },
+  { id: "d2", title: "Launch date March 15", status: "proposed", confidence: 0.75 },
+  { id: "d3", title: "4-Tier Pricing Model", status: "proposed", confidence: 0.65 },
+  { id: "d4", title: "Deprecate API v1", status: "confirmed", confidence: 0.95 },
+];
+
+// Related conflicts mock
+const relatedConflicts = [
+  { id: "c1", description: "Marketing/Engineering date conflict", severity: "high" },
+  { id: "c2", description: "Pricing tier disagreement", severity: "medium" },
+];
 
 const GraphPage = () => {
   const [timeRange, setTimeRange] = useState("7d");
@@ -45,40 +78,54 @@ const GraphPage = () => {
   const [showBottlenecksOnly, setShowBottlenecksOnly] = useState(false);
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [activeTab, setActiveTab] = useState("flow");
+  const [selectedTeam, setSelectedTeam] = useState("all");
 
   const toggleNodeType = (type: EntityType) => {
     setNodeFilters(prev => ({ ...prev, [type]: !prev[type] }));
   };
 
-  // Get entity details
-  const getEntityDetails = (node: SelectedNode) => {
-    switch (node.type) {
-      case "person":
-        return mockPersons.find(p => p.id === node.id);
-      case "team":
-        return mockTeams.find(t => t.id === node.id);
-      case "topic":
-        return mockTopics.find(t => t.id === node.id);
-      case "decision":
-        return mockDecisions.find(d => d.id === node.id);
-      case "document":
-        return mockDocuments.find(d => d.id === node.id);
+  const handleNodeClick = (node: GraphNode) => {
+    setSelectedNode({
+      id: node.id,
+      type: node.type,
+      label: node.label,
+      metadata: node.metadata,
+      connections: node.connections,
+    });
+  };
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case "active":
+      case "confirmed":
+        return "bg-success/20 text-success border-success/30";
+      case "pending":
+      case "proposed":
+        return "bg-warning/20 text-warning border-warning/30";
+      case "resolved":
+      case "deprecated":
+        return "bg-muted text-muted-foreground border-muted";
       default:
-        return null;
+        return "bg-secondary text-foreground border-border";
     }
   };
 
-  const entityDetails = selectedNode ? getEntityDetails(selectedNode) : null;
+  const getLoadColor = (loadScore?: number) => {
+    if (!loadScore) return "text-muted-foreground";
+    if (loadScore >= 90) return "text-destructive";
+    if (loadScore >= 75) return "text-warning";
+    return "text-success";
+  };
 
   return (
     <AppLayout>
-      <div className="h-full flex gap-6 animate-fade-in">
+      <div className="h-full flex gap-4 animate-fade-in">
         {/* Left Panel: Filters */}
-        <div className="w-64 shrink-0 space-y-6">
+        <div className="w-72 shrink-0 space-y-5 bg-card/50 rounded-xl border border-border p-4">
           <div>
-            <h1 className="text-xl font-bold text-foreground">Knowledge Graph</h1>
+            <h1 className="text-lg font-bold text-foreground">Knowledge Graph</h1>
             <p className="text-xs text-muted-foreground mt-1">
-              Visualize who knows what and how knowledge flows
+              Visualize stakeholders, dependencies & knowledge flow
             </p>
           </div>
 
@@ -99,57 +146,77 @@ const GraphPage = () => {
           </div>
 
           {/* Node Type Toggles */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Node Types</Label>
-            {(Object.entries(nodeTypeConfig) as [EntityType, typeof nodeTypeConfig.person][]).map(([type, config]) => {
-              const Icon = config.icon;
-              return (
-                <div 
-                  key={type}
-                  className="flex items-center justify-between p-2 rounded-lg bg-card border border-border"
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon className={cn("w-4 h-4", config.color)} />
-                    <span className="text-sm text-foreground">{config.label}</span>
-                  </div>
-                  <Switch 
-                    checked={nodeFilters[type]} 
-                    onCheckedChange={() => toggleNodeType(type)}
-                  />
-                </div>
-              );
-            })}
+            <div className="space-y-2">
+              {(Object.entries(nodeTypeConfig) as [EntityType, typeof nodeTypeConfig.person][]).map(([type, config]) => {
+                const Icon = config.icon;
+                const isEnabled = nodeFilters[type];
+                return (
+                  <button
+                    key={type}
+                    onClick={() => toggleNodeType(type)}
+                    className={cn(
+                      "flex items-center justify-between w-full p-2.5 rounded-lg border transition-all",
+                      isEnabled 
+                        ? "bg-secondary/50 border-border hover:bg-secondary"
+                        : "bg-transparent border-border/50 opacity-50 hover:opacity-75"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className={cn("w-4 h-4", isEnabled ? config.color : "text-muted-foreground")} />
+                      <span className={cn("text-sm", isEnabled ? "text-foreground" : "text-muted-foreground")}>
+                        {config.label}
+                      </span>
+                    </div>
+                    <Switch 
+                      checked={isEnabled}
+                      onCheckedChange={() => toggleNodeType(type)}
+                      className="pointer-events-none"
+                    />
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Special Filters */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Special Views</Label>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-conflict" />
-                <span className="text-sm text-foreground">Conflicts only</span>
+            <div className="space-y-2">
+              <div className={cn(
+                "flex items-center justify-between p-2.5 rounded-lg border transition-all",
+                showConflictsOnly ? "bg-conflict/10 border-conflict/30" : "bg-secondary/50 border-border"
+              )}>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className={cn("w-4 h-4", showConflictsOnly ? "text-conflict" : "text-muted-foreground")} />
+                  <span className="text-sm text-foreground">Conflicts only</span>
+                </div>
+                <Switch 
+                  checked={showConflictsOnly} 
+                  onCheckedChange={setShowConflictsOnly}
+                />
               </div>
-              <Switch 
-                checked={showConflictsOnly} 
-                onCheckedChange={setShowConflictsOnly}
-              />
-            </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
-              <div className="flex items-center gap-2">
-                <Minus className="w-4 h-4 text-warning" />
-                <span className="text-sm text-foreground">Bottlenecks only</span>
+              <div className={cn(
+                "flex items-center justify-between p-2.5 rounded-lg border transition-all",
+                showBottlenecksOnly ? "bg-warning/10 border-warning/30" : "bg-secondary/50 border-border"
+              )}>
+                <div className="flex items-center gap-2">
+                  <Zap className={cn("w-4 h-4", showBottlenecksOnly ? "text-warning" : "text-muted-foreground")} />
+                  <span className="text-sm text-foreground">Bottlenecks only</span>
+                </div>
+                <Switch 
+                  checked={showBottlenecksOnly} 
+                  onCheckedChange={setShowBottlenecksOnly}
+                />
               </div>
-              <Switch 
-                checked={showBottlenecksOnly} 
-                onCheckedChange={setShowBottlenecksOnly}
-              />
             </div>
           </div>
 
-          {/* Team/Project Filter */}
+          {/* Team Filter */}
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Filter by Team</Label>
-            <Select defaultValue="all">
+            <Select value={selectedTeam} onValueChange={setSelectedTeam}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="All teams" />
               </SelectTrigger>
@@ -164,141 +231,208 @@ const GraphPage = () => {
         </div>
 
         {/* Graph Canvas */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* View Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
-            <TabsList>
-              <TabsTrigger value="flow">Flow Map</TabsTrigger>
-              <TabsTrigger value="bottlenecks">Bottlenecks</TabsTrigger>
-              <TabsTrigger value="diff">Diff View</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="mb-3 flex items-center justify-between">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList>
+                <TabsTrigger value="flow" className="gap-1.5">
+                  <GitBranch className="w-3.5 h-3.5" />
+                  Flow Map
+                </TabsTrigger>
+                <TabsTrigger value="bottlenecks" className="gap-1.5">
+                  <Zap className="w-3.5 h-3.5" />
+                  Bottlenecks
+                </TabsTrigger>
+                <TabsTrigger value="diff" className="gap-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  Diff View
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            <div className="text-xs text-muted-foreground">
+              Click nodes to inspect • Drag to pan • Scroll to zoom
+            </div>
+          </div>
 
           {/* Graph */}
           <div className="flex-1 rounded-xl overflow-hidden border border-border">
             <KnowledgeGraph 
               className="h-full" 
-              onNodeClick={(node) => setSelectedNode(node as SelectedNode)}
+              onNodeClick={handleNodeClick}
+              nodeFilters={nodeFilters}
             />
           </div>
         </div>
 
         {/* Right Drawer: Node Inspector */}
         {selectedNode && (
-          <div className="w-80 shrink-0 bg-card rounded-xl border border-border overflow-hidden">
-            <div className="p-4 border-b border-border bg-gradient-card flex items-center justify-between">
-              <div className="flex items-center gap-2">
+          <div className="w-80 shrink-0 bg-card rounded-xl border border-border overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-4 border-b border-border bg-gradient-card flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
                 {(() => {
                   const Icon = nodeTypeConfig[selectedNode.type].icon;
-                  return <Icon className={cn("w-5 h-5", nodeTypeConfig[selectedNode.type].color)} />;
+                  return <Icon className={cn("w-5 h-5 shrink-0", nodeTypeConfig[selectedNode.type].color)} />;
                 })()}
-                <span className="font-semibold text-foreground text-sm">{selectedNode.label}</span>
+                <span className="font-semibold text-foreground text-sm truncate">{selectedNode.label}</span>
               </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-7 w-7"
+                className="h-7 w-7 shrink-0"
                 onClick={() => setSelectedNode(null)}
               >
                 <X className="w-4 h-4" />
               </Button>
             </div>
 
-            <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-300px)]">
-              {/* Type Badge */}
-              <div className="flex items-center gap-2">
-                <span className={cn(
-                  "px-2 py-1 rounded-full text-xs font-medium capitalize",
-                  "bg-primary/10 text-primary"
-                )}>
-                  {selectedNode.type}
-                </span>
-              </div>
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-4">
+                {/* Type and Status Badges */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="capitalize">
+                    {selectedNode.type}
+                  </Badge>
+                  {selectedNode.metadata?.status && (
+                    <Badge className={cn("capitalize border", getStatusColor(selectedNode.metadata.status))}>
+                      {selectedNode.metadata.status}
+                    </Badge>
+                  )}
+                  {selectedNode.metadata?.loadScore && selectedNode.metadata.loadScore > 75 && (
+                    <Badge className="bg-destructive/20 text-destructive border-destructive/30">
+                      High Load
+                    </Badge>
+                  )}
+                </div>
 
-              {/* AI Summary */}
-              <div className="p-3 rounded-lg bg-secondary/50 border border-border">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-4 h-4 rounded-full bg-gradient-primary flex items-center justify-center">
-                    <span className="text-[8px] font-bold text-primary-foreground">AI</span>
+                {/* Role/Description */}
+                {selectedNode.metadata?.role && (
+                  <div className="text-sm text-muted-foreground">
+                    {selectedNode.metadata.role}
                   </div>
-                  <span className="text-xs font-medium text-muted-foreground">AI Summary</span>
-                </div>
-                <p className="text-sm text-foreground leading-relaxed">
-                  {selectedNode.type === "person" && "Key stakeholder involved in 3 active decisions. Primary communication hub between Engineering and Product teams."}
-                  {selectedNode.type === "team" && "High-velocity team with 5 active projects. Dependencies on Product for roadmap clarity."}
-                  {selectedNode.type === "topic" && "Critical topic affecting Q1 timeline. Referenced in 4 recent decisions."}
-                  {selectedNode.type === "decision" && "Important decision with moderate confidence. Awaiting stakeholder confirmation from Marketing."}
-                  {selectedNode.type === "document" && "Reference document for enterprise requirements. Last updated 3 days ago."}
-                </p>
-              </div>
+                )}
 
-              {/* Entity Details */}
-              {entityDetails && (
-                <div className="space-y-3">
-                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Details</h4>
-                  {"role" in entityDetails && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Role</span>
-                      <span className="text-foreground">{entityDetails.role}</span>
+                {/* Stats Row */}
+                <div className="flex gap-4 p-3 rounded-lg bg-secondary/50">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-foreground">
+                      {selectedNode.connections?.length || 0}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                      Connections
+                    </div>
+                  </div>
+                  {selectedNode.metadata?.loadScore && (
+                    <div className="text-center">
+                      <div className={cn("text-lg font-bold", getLoadColor(selectedNode.metadata.loadScore))}>
+                        {selectedNode.metadata.loadScore}%
+                      </div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                        Load
+                      </div>
                     </div>
                   )}
-                  {"email" in entityDetails && entityDetails.email && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Email</span>
-                      <span className="text-foreground">{entityDetails.email}</span>
-                    </div>
-                  )}
-                  {"status" in entityDetails && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Status</span>
-                      <span className="text-foreground capitalize">{entityDetails.status}</span>
-                    </div>
-                  )}
-                  {"confidence" in entityDetails && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Confidence</span>
-                      <span className="text-foreground">{Math.round(entityDetails.confidence * 100)}%</span>
+                  {selectedNode.metadata?.confidence && (
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-foreground">
+                        {Math.round(selectedNode.metadata.confidence * 100)}%
+                      </div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                        Confidence
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
 
-              {/* Related Decisions */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Related Decisions</h4>
+                {/* AI Summary */}
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-gradient-primary flex items-center justify-center">
+                      <span className="text-[9px] font-bold text-primary-foreground">AI</span>
+                    </div>
+                    <span className="text-xs font-medium text-primary">AI Summary</span>
+                  </div>
+                  <p className="text-sm text-foreground leading-relaxed">
+                    {selectedNode.type === "person" && `Key stakeholder with ${selectedNode.connections?.length || 0} active connections. ${selectedNode.metadata?.loadScore && selectedNode.metadata.loadScore > 80 ? "Currently at high capacity - consider redistributing workload." : "Communication hub between teams."}`}
+                    {selectedNode.type === "team" && `Active team with multiple cross-functional dependencies. Key contributor to ongoing initiatives.`}
+                    {selectedNode.type === "topic" && `Strategic topic actively referenced in organizational discussions and decisions.`}
+                    {selectedNode.type === "decision" && `${selectedNode.metadata?.status === "pending" ? "Awaiting stakeholder confirmation." : "Confirmed decision in effect."} Confidence: ${Math.round((selectedNode.metadata?.confidence || 0.5) * 100)}%`}
+                    {selectedNode.type === "document" && `Reference document supporting key decisions. ${selectedNode.metadata?.status === "pending" ? "Requires review." : "Up to date."}`}
+                  </p>
+                </div>
+
+                {/* Related Decisions */}
                 <div className="space-y-2">
-                  {mockDecisions.slice(0, 3).map(d => (
-                    <div key={d.id} className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors">
-                      <p className="text-sm text-foreground line-clamp-1">{d.title}</p>
-                      <span className={cn(
-                        "text-xs capitalize",
-                        d.status === "confirmed" ? "text-success" : "text-warning"
-                      )}>{d.status}</span>
-                    </div>
-                  ))}
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="w-3 h-3" />
+                    Related Decisions
+                  </h4>
+                  <div className="space-y-1.5">
+                    {relatedDecisions.slice(0, 3).map(d => (
+                      <div key={d.id} className="p-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm text-foreground line-clamp-1 flex-1">{d.title}</p>
+                          <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={cn(
+                            "text-xs capitalize px-1.5 py-0.5 rounded",
+                            d.status === "confirmed" ? "bg-success/20 text-success" : "bg-warning/20 text-warning"
+                          )}>{d.status}</span>
+                          <span className="text-xs text-muted-foreground">{Math.round(d.confidence * 100)}% confidence</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Related Conflicts */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <AlertTriangle className="w-3 h-3" />
+                    Active Conflicts
+                  </h4>
+                  <div className="space-y-1.5">
+                    {relatedConflicts.map(c => (
+                      <div key={c.id} className="p-2.5 rounded-lg bg-conflict/5 border border-conflict/20 hover:bg-conflict/10 cursor-pointer transition-colors">
+                        <p className="text-sm text-foreground line-clamp-2">{c.description}</p>
+                        <Badge className={cn(
+                          "mt-1.5 text-[10px]",
+                          c.severity === "high" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"
+                        )}>
+                          {c.severity} severity
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Why Routed */}
+                <div className="p-3 rounded-lg bg-info/5 border border-info/20">
+                  <h4 className="text-xs font-medium text-info mb-2 flex items-center gap-1.5">
+                    <MessageSquare className="w-3 h-3" />
+                    Why routed to you?
+                  </h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    This {selectedNode.type} is in your view because you have ownership of related decisions or your team has dependencies on this information flow.
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-2">
+                  <Button size="sm" className="flex-1 text-xs h-9">
+                    <Plus className="w-3 h-3 mr-1" />
+                    Create Update
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1 text-xs h-9">
+                    <FileText className="w-3 h-3 mr-1" />
+                    Log Decision
+                  </Button>
                 </div>
               </div>
-
-              {/* Why Routed */}
-              <div className="p-3 rounded-lg bg-info/5 border border-info/20">
-                <h4 className="text-xs font-medium text-info mb-2">Why routed to you?</h4>
-                <p className="text-xs text-muted-foreground">
-                  This {selectedNode.type} appears in your routing queue because you own related decisions and your team depends on this information.
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button size="sm" className="flex-1 text-xs">
-                  <Plus className="w-3 h-3 mr-1" />
-                  Create Update
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1 text-xs">
-                  <FileText className="w-3 h-3 mr-1" />
-                  Create Decision
-                </Button>
-              </div>
-            </div>
+            </ScrollArea>
           </div>
         )}
       </div>
