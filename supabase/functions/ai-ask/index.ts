@@ -1,10 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { 
+  corsHeaders, 
+  authenticateRequest, 
+  unauthorizedResponse,
+  validateString,
+  validateUUID,
+  validateNumber,
+  sanitizeForLike
+} from "../_shared/auth.ts";
 
 // Tool schemas for function calling
 const tools = [
@@ -111,18 +115,21 @@ const tools = [
 
 // Tool execution functions
 async function executeSearchKnowledge(supabase: any, args: { query: string; limit?: number }) {
-  const limit = Math.min(args.limit || 10, 25);
+  // Validate and sanitize input
+  const query = validateString(args.query, "query", 1000);
+  const limit = Math.min(validateNumber(args.limit ?? 10, "limit", 1, 25), 25);
   
   // Extract key terms for better search (split on spaces, filter short words)
-  const terms = args.query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+  const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
   const searchTerms = terms.slice(0, 3); // Use first 3 meaningful terms
   
-  // Build OR conditions for each term
+  // Build OR conditions for each term (sanitized)
   const buildFilter = (columns: string[]) => {
     const conditions: string[] = [];
     for (const term of searchTerms) {
+      const sanitizedTerm = sanitizeForLike(term);
       for (const col of columns) {
-        conditions.push(`${col}.ilike.%${term}%`);
+        conditions.push(`${col}.ilike.%${sanitizedTerm}%`);
       }
     }
     return conditions.join(',');
@@ -142,7 +149,7 @@ async function executeSearchKnowledge(supabase: any, args: { query: string; limi
       .limit(limit),
     supabase
       .from("persons")
-      .select("id, name, role, email, team_id, load_score")
+      .select("id, name, role, team_id, load_score")
       .or(buildFilter(['name', 'role']))
       .limit(limit),
     supabase
@@ -188,7 +195,7 @@ async function executeSearchKnowledge(supabase: any, args: { query: string; limi
         id: p.id,
         entityType: "Person",
         title: p.name,
-        snippet: `${p.role || "Unknown role"} | ${p.email || "No email"} | Load: ${p.load_score || 0}%`,
+        snippet: `${p.role || "Unknown role"} | Load: ${p.load_score || 0}%`,
         team_id: p.team_id,
         confidence: 0.8,
         deepLink: `/graph?focus=person:${p.id}`,
@@ -209,7 +216,7 @@ async function executeSearchKnowledge(supabase: any, args: { query: string; limi
     }
   }
 
-  console.log(`Search for "${args.query}" found ${results.length} results`);
+  console.log(`Search for "${query}" found ${results.length} results`);
   return { results: results.slice(0, limit) };
 }
 
@@ -219,14 +226,30 @@ async function executeCreateDecision(supabase: any, args: {
   owner_person_id?: string;
   affected_team_ids?: string[];
 }) {
+  // Validate inputs
+  const title = validateString(args.title, "title", 500);
+  const canonical_text = validateString(args.canonical_text, "canonical_text", 10000);
+  
+  let owner_person_id = null;
+  if (args.owner_person_id) {
+    owner_person_id = validateUUID(args.owner_person_id, "owner_person_id");
+  }
+  
+  const affected_team_ids: string[] = [];
+  if (args.affected_team_ids) {
+    for (const id of args.affected_team_ids) {
+      affected_team_ids.push(validateUUID(id, "affected_team_id"));
+    }
+  }
+
   // Create decision
   const { data: decision, error: decisionError } = await supabase
     .from("decisions")
     .insert({
-      title: args.title,
-      canonical_text: args.canonical_text,
+      title,
+      canonical_text,
       status: "proposed",
-      owner_person_id: args.owner_person_id || null,
+      owner_person_id,
       confidence: 0.7,
     })
     .select()
@@ -238,14 +261,14 @@ async function executeCreateDecision(supabase: any, args: {
   await supabase.from("decision_versions").insert({
     decision_id: decision.id,
     version_num: 1,
-    text: args.canonical_text,
+    text: canonical_text,
     change_reason: "Initial creation",
-    changed_by: args.owner_person_id || null,
+    changed_by: owner_person_id,
   });
 
   // Link affected teams
-  if (args.affected_team_ids?.length) {
-    for (const teamId of args.affected_team_ids) {
+  if (affected_team_ids.length > 0) {
+    for (const teamId of affected_team_ids) {
       await supabase.from("decision_affected_teams").insert({
         decision_id: decision.id,
         team_id: teamId,
@@ -266,11 +289,21 @@ async function executeReviseDecision(supabase: any, args: {
   change_reason: string;
   changed_by_person_id?: string;
 }) {
+  // Validate inputs
+  const decision_id = validateUUID(args.decision_id, "decision_id");
+  const new_text = validateString(args.new_text, "new_text", 10000);
+  const change_reason = validateString(args.change_reason, "change_reason", 1000);
+  
+  let changed_by = null;
+  if (args.changed_by_person_id) {
+    changed_by = validateUUID(args.changed_by_person_id, "changed_by_person_id");
+  }
+
   // Get current max version
   const { data: versions } = await supabase
     .from("decision_versions")
     .select("version_num")
-    .eq("decision_id", args.decision_id)
+    .eq("decision_id", decision_id)
     .order("version_num", { ascending: false })
     .limit(1);
 
@@ -278,23 +311,23 @@ async function executeReviseDecision(supabase: any, args: {
 
   // Create new version
   await supabase.from("decision_versions").insert({
-    decision_id: args.decision_id,
+    decision_id,
     version_num: nextVersion,
-    text: args.new_text,
-    change_reason: args.change_reason,
-    changed_by: args.changed_by_person_id || null,
+    text: new_text,
+    change_reason,
+    changed_by,
   });
 
   // Update canonical text
   await supabase
     .from("decisions")
-    .update({ canonical_text: args.new_text, updated_at: new Date().toISOString() })
-    .eq("id", args.decision_id);
+    .update({ canonical_text: new_text, updated_at: new Date().toISOString() })
+    .eq("id", decision_id);
 
   return {
-    decision_id: args.decision_id,
+    decision_id,
     new_version_num: nextVersion,
-    diff_summary: `Updated to v${nextVersion}: ${args.change_reason}`,
+    diff_summary: `Updated to v${nextVersion}: ${change_reason}`,
   };
 }
 
@@ -304,13 +337,23 @@ async function executeLogUpdate(supabase: any, args: {
   why_it_matters?: string;
   impact_score?: number;
 }) {
+  // Validate inputs
+  const validTypes = ["decision", "knowledge", "stakeholder", "risk"];
+  if (!validTypes.includes(args.type)) {
+    throw new Error(`type must be one of: ${validTypes.join(", ")}`);
+  }
+  
+  const summary = validateString(args.summary, "summary", 1000);
+  const why_it_matters = args.why_it_matters ? validateString(args.why_it_matters, "why_it_matters", 2000) : null;
+  const impact_score = args.impact_score !== undefined ? validateNumber(args.impact_score, "impact_score", 0, 1) : 0.5;
+
   const { data: updateEvent, error } = await supabase
     .from("update_events")
     .insert({
       type: args.type,
-      summary: args.summary,
-      why_it_matters: args.why_it_matters || null,
-      impact_score: args.impact_score || 0.5,
+      summary,
+      why_it_matters,
+      impact_score,
     })
     .select()
     .single();
@@ -329,13 +372,23 @@ async function executeFlagConflict(supabase: any, args: {
   description: string;
   severity: number;
 }) {
+  // Validate inputs
+  const validEntityTypes = ["person", "team", "topic", "decision", "document"];
+  if (!validEntityTypes.includes(args.entity_type)) {
+    throw new Error(`entity_type must be one of: ${validEntityTypes.join(", ")}`);
+  }
+  
+  const entity_id = validateUUID(args.entity_id, "entity_id");
+  const description = validateString(args.description, "description", 2000);
+  const severity = validateNumber(args.severity, "severity", 1, 10);
+
   const { data: conflict, error } = await supabase
     .from("conflicts")
     .insert({
       entity_type: args.entity_type,
-      entity_id: args.entity_id,
-      description: args.description,
-      severity: args.severity,
+      entity_id,
+      description,
+      severity: Math.round(severity),
       status: "open",
     })
     .select()
@@ -354,24 +407,28 @@ async function executeComputeRoutingTargets(supabase: any, args: {
   entity_id: string;
   max_targets?: number;
 }) {
-  const maxTargets = args.max_targets || 15;
+  // Validate inputs
+  const validEntityTypes = ["decision", "topic"];
+  if (!validEntityTypes.includes(args.entity_type)) {
+    throw new Error(`entity_type must be one of: ${validEntityTypes.join(", ")}`);
+  }
+  
+  const entity_id = validateUUID(args.entity_id, "entity_id");
+  const maxTargets = Math.min(validateNumber(args.max_targets ?? 15, "max_targets", 1, 50), 50);
 
-  // Get relevant persons based on entity relationships
   let targets: any[] = [];
 
   if (args.entity_type === "decision") {
-    // Get decision owner and affected team members
     const { data: decision } = await supabase
       .from("decisions")
       .select(`
         owner_person_id,
         decision_affected_teams(team_id)
       `)
-      .eq("id", args.entity_id)
+      .eq("id", entity_id)
       .single();
 
     if (decision) {
-      // Get team members from affected teams
       const teamIds = decision.decision_affected_teams?.map((t: any) => t.team_id) || [];
       if (teamIds.length > 0) {
         const { data: teamMembers } = await supabase
@@ -389,7 +446,6 @@ async function executeComputeRoutingTargets(supabase: any, args: {
         }
       }
 
-      // Add owner as Action priority
       if (decision.owner_person_id) {
         targets.unshift({
           person_id: decision.owner_person_id,
@@ -429,14 +485,14 @@ serve(async (req) => {
   }
 
   try {
-    const { message, userId, orgId } = await req.json();
-
-    if (!message || typeof message !== "string") {
-      return new Response(
-        JSON.stringify({ error: "Missing 'message' string" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Authenticate the request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse();
     }
+
+    const body = await req.json();
+    const message = validateString(body.message, "message", 10000);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -472,8 +528,8 @@ You have access to the organization's knowledge graph and can:
 - Compute routing targets for notifications
 
 Current context:
-- Organization: ${orgId || "org_001"}
-- User: ${userId || "user_001"}
+- User ID: ${auth.userId}
+- User Email: ${auth.email || "unknown"}
 
 Retrieved context from knowledge base:
 ${contextBlock || "No relevant context found."}
@@ -506,6 +562,7 @@ Keep responses concise and actionable. When creating or modifying organizational
           messages,
           tools,
           tool_choice: "auto",
+          temperature: 0.3,
         }),
       });
 
@@ -522,75 +579,41 @@ Keep responses concise and actionable. When creating or modifying organizational
             { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        const errorText = await response.text();
-        console.error("AI gateway error:", response.status, errorText);
         throw new Error(`AI gateway error: ${response.status}`);
       }
 
-      const data = await response.json();
-      const choice = data.choices?.[0];
+      const aiData = await response.json();
+      const choice = aiData.choices[0];
 
-      if (!choice) {
-        throw new Error("No response from AI");
-      }
-
-      // Check for tool calls
-      const toolCalls = choice.message?.tool_calls;
-
-      if (toolCalls && toolCalls.length > 0) {
-        // Add assistant message with tool calls
+      if (choice.finish_reason === "tool_calls" && choice.message.tool_calls) {
         messages.push(choice.message);
 
-        // Execute each tool call
-        for (const toolCall of toolCalls) {
+        for (const toolCall of choice.message.tool_calls) {
           const toolName = toolCall.function.name;
-          const toolArgs = JSON.parse(toolCall.function.arguments || "{}");
-
-          console.log(`Executing tool: ${toolName}`, toolArgs);
-
+          let args = {};
           try {
-            const result = await executeTool(supabase, toolName, toolArgs);
+            args = JSON.parse(toolCall.function.arguments || "{}");
+          } catch {
+            args = {};
+          }
 
-            // Track created entities and generate UI suggestions
-            if (toolName === "create_decision" && result.decision_id) {
-              createdEntities.push({ type: "Decision", ...result });
-              uiSuggestions.push({
-                type: "toast",
-                message: `Decision created (v${result.version_num})`,
-                deepLink: result.deepLink,
-              });
-            } else if (toolName === "revise_decision" && result.decision_id) {
-              createdEntities.push({ type: "DecisionVersion", ...result });
-              uiSuggestions.push({
-                type: "toast",
-                message: `Decision updated to v${result.new_version_num}`,
-                deepLink: `/decisions?selected=${result.decision_id}`,
-              });
-            } else if (toolName === "log_update" && result.update_id) {
-              createdEntities.push({ type: "UpdateEvent", ...result });
-              uiSuggestions.push({
-                type: "toast",
-                message: "Update logged",
-                deepLink: result.deepLink,
-              });
-            } else if (toolName === "flag_conflict" && result.conflict_id) {
-              createdEntities.push({ type: "Conflict", ...result });
-              uiSuggestions.push({
-                type: "alert",
-                severity: "high",
-                message: "Conflict flagged for review",
-                deepLink: `/updates?focus=conflict:${result.conflict_id}`,
-              });
+          console.log(`Executing tool: ${toolName}`, args);
+          
+          try {
+            const result = await executeTool(supabase, toolName, args);
+            
+            if (result && !result.error) {
+              if (toolName === "create_decision") {
+                createdEntities.push({ type: "decision", ...result });
+              }
             }
 
-            // Add tool result to messages
             messages.push({
               role: "tool",
               tool_call_id: toolCall.id,
               content: JSON.stringify(result),
             });
           } catch (toolError: any) {
-            console.error(`Tool execution error: ${toolName}`, toolError);
             messages.push({
               role: "tool",
               tool_call_id: toolCall.id,
@@ -598,52 +621,23 @@ Keep responses concise and actionable. When creating or modifying organizational
             });
           }
         }
-
-        // Continue the loop to get the final response
-        continue;
-      }
-
-      // No tool calls - we have the final answer
-      finalAnswer = choice.message?.content || "";
-      break;
-    }
-
-    // If we hit max iterations without a final answer, generate a summary
-    if (!finalAnswer) {
-      console.log("Max iterations reached, generating fallback response");
-      
-      // Make one final call without tools to force a response
-      const fallbackResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            ...messages,
-            { role: "user", content: "Based on all the information gathered, please provide a concise summary answer to the original question. Do not call any more tools." }
-          ],
-        }),
-      });
-
-      if (fallbackResponse.ok) {
-        const fallbackData = await fallbackResponse.json();
-        finalAnswer = fallbackData.choices?.[0]?.message?.content || "I found some relevant information but couldn't synthesize a complete answer. Please try a more specific question.";
+      } else {
+        finalAnswer = choice.message.content || "";
+        break;
       }
     }
 
     return new Response(
       JSON.stringify({
         answer: finalAnswer,
-        ui_suggestions: uiSuggestions,
-        created_entities: createdEntities,
+        createdEntities,
+        uiSuggestions,
+        iterations,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("AI ask error:", error);
+    console.error("AI Ask error:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

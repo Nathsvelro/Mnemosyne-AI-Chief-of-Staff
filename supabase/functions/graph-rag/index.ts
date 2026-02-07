@@ -1,10 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { 
+  corsHeaders, 
+  authenticateRequest, 
+  unauthorizedResponse,
+  validateString,
+  validateNumber,
+  sanitizeForLike
+} from "../_shared/auth.ts";
 
 /**
  * Graph-RAG: Hybrid retrieval combining vector search + graph traversal
@@ -14,19 +17,18 @@ const corsHeaders = {
  * Stage 3: Answer synthesis with citations
  */
 
-interface GraphRAGRequest {
-  query: string;
-  max_chunks?: number;
-  graph_hops?: number;
-  include_reasoning?: boolean;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Authenticate the request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse();
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
@@ -36,17 +38,13 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body: GraphRAGRequest = await req.json();
-    const {
-      query,
-      max_chunks = 5,
-      graph_hops = 2,
-      include_reasoning = true,
-    } = body;
-
-    if (!query) {
-      throw new Error("Query is required");
-    }
+    const body = await req.json();
+    
+    // Validate inputs
+    const query = validateString(body.query, "query", 2000);
+    const max_chunks = Math.min(validateNumber(body.max_chunks ?? 5, "max_chunks", 1, 20), 20);
+    const graph_hops = Math.min(validateNumber(body.graph_hops ?? 2, "graph_hops", 1, 4), 4);
+    const include_reasoning = body.include_reasoning !== false;
 
     console.log(`[Graph-RAG] Processing query: "${query}"`);
 
@@ -94,21 +92,22 @@ serve(async (req) => {
       r.linked_node_ids?.forEach((id) => seedNodeIds.add(id));
     });
 
-    // Also do keyword search on organizational entities
-    const keywords = query.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+    // Also do keyword search on organizational entities (sanitized)
+    const keywords = query.toLowerCase().split(/\s+/).filter((w) => w.length > 3).slice(0, 5);
+    const sanitizedKeywords = keywords.map(sanitizeForLike);
     
     const [personsResult, teamsResult, topicsResult, decisionsResult] = await Promise.all([
       supabase.from("persons").select("id, name, role").or(
-        keywords.map((k) => `name.ilike.%${k}%,role.ilike.%${k}%`).join(",")
+        sanitizedKeywords.map((k) => `name.ilike.%${k}%,role.ilike.%${k}%`).join(",")
       ).limit(5),
       supabase.from("teams").select("id, name, description").or(
-        keywords.map((k) => `name.ilike.%${k}%,description.ilike.%${k}%`).join(",")
+        sanitizedKeywords.map((k) => `name.ilike.%${k}%,description.ilike.%${k}%`).join(",")
       ).limit(5),
       supabase.from("topics").select("id, name, description").or(
-        keywords.map((k) => `name.ilike.%${k}%,description.ilike.%${k}%`).join(",")
+        sanitizedKeywords.map((k) => `name.ilike.%${k}%,description.ilike.%${k}%`).join(",")
       ).limit(5),
       supabase.from("decisions").select("id, title, canonical_text, status, confidence, owner_person_id").or(
-        keywords.map((k) => `title.ilike.%${k}%,canonical_text.ilike.%${k}%`).join(",")
+        sanitizedKeywords.map((k) => `title.ilike.%${k}%,canonical_text.ilike.%${k}%`).join(",")
       ).limit(5),
     ]);
 
@@ -134,17 +133,15 @@ serve(async (req) => {
 
     console.log(`[Graph-RAG] Stage 2: ${seedNodeIds.size} seed nodes, ${entityContext.length} direct matches`);
 
-    // Expand graph from seed nodes
+    // Expand graph from seed nodes (limit to 10 to prevent excessive queries)
     const graphExpansions: { seed_id: string; connections: unknown[] }[] = [];
     
     for (const nodeId of Array.from(seedNodeIds).slice(0, 10)) {
-      // Determine entity type
       let entityType = null;
       const entity = entityContext.find((e) => (e as { id: string }).id === nodeId);
       if (entity) {
         entityType = (entity as { type: string }).type;
       } else {
-        // Check tables
         for (const table of ["persons", "teams", "topics", "decisions", "documents"]) {
           const { data } = await supabase.from(table).select("id").eq("id", nodeId).maybeSingle();
           if (data) {
@@ -196,10 +193,8 @@ serve(async (req) => {
     // STAGE 3: Answer Synthesis
     // ========================================
 
-    // Build context for LLM
     const contextParts: string[] = [];
 
-    // Add vector search results
     if (vectorResults.length > 0) {
       contextParts.push("=== Retrieved Documents ===");
       vectorResults.forEach((r, i) => {
@@ -207,7 +202,6 @@ serve(async (req) => {
       });
     }
 
-    // Add direct entity matches
     if (entityContext.length > 0) {
       contextParts.push("\n=== Organizational Entities ===");
       entityContext.forEach((e) => {
@@ -216,7 +210,6 @@ serve(async (req) => {
       });
     }
 
-    // Add graph relationships
     if (expandedNodeDetails.length > 0) {
       contextParts.push("\n=== Connected Entities (via Graph) ===");
       expandedNodeDetails.slice(0, 15).forEach((n) => {
@@ -252,7 +245,6 @@ ${include_reasoning ? "Include your reasoning about how the entities are connect
 
 Answer the question based on the above context. If you cannot find sufficient information, say so clearly.`;
 
-    // Generate answer using LLM
     const llmResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -279,7 +271,6 @@ Answer the question based on the above context. If you cannot find sufficient in
     const llmResult = await llmResponse.json();
     const answer = llmResult.choices[0].message.content;
 
-    // Build response
     const response = {
       query,
       answer,

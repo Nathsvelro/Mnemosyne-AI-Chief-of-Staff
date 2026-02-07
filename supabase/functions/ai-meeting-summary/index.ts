@@ -1,10 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { 
+  corsHeaders, 
+  authenticateRequest, 
+  unauthorizedResponse,
+  validateString,
+  validateArray
+} from "../_shared/auth.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,13 +14,23 @@ serve(async (req) => {
   }
 
   try {
-    const { transcript, meeting_title, attendees } = await req.json();
+    // Authenticate the request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse();
+    }
 
-    if (!transcript || typeof transcript !== "string") {
-      return new Response(
-        JSON.stringify({ error: "Missing 'transcript' string" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const body = await req.json();
+    
+    // Validate inputs
+    const transcript = validateString(body.transcript, "transcript", 200000);
+    const meeting_title = body.meeting_title ? validateString(body.meeting_title, "meeting_title", 500) : "Untitled Meeting";
+    
+    let attendees: string[] = [];
+    if (body.attendees) {
+      attendees = validateArray<string>(body.attendees, "attendees", 100);
+      // Validate each attendee name
+      attendees = attendees.map((a, i) => validateString(a, `attendee[${i}]`, 200));
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -33,8 +45,8 @@ serve(async (req) => {
     // Extract meeting summary using Lovable AI
     const summaryPrompt = `Analyze this meeting transcript and extract the following:
 
-Meeting: ${meeting_title || "Untitled Meeting"}
-Attendees: ${attendees?.join(", ") || "Unknown"}
+Meeting: ${meeting_title}
+Attendees: ${attendees.length > 0 ? attendees.join(", ") : "Unknown"}
 
 Transcript:
 ${transcript}
@@ -135,8 +147,8 @@ Extract and respond in JSON format:
           const { data: newDecision, error } = await supabase
             .from("decisions")
             .insert({
-              title: decision.title,
-              canonical_text: decision.canonical_text,
+              title: validateString(decision.title || "Untitled Decision", "decision.title", 500),
+              canonical_text: validateString(decision.canonical_text || decision.title, "decision.canonical_text", 10000),
               status: "proposed",
               confidence: decision.confidence,
             })
@@ -144,12 +156,11 @@ Extract and respond in JSON format:
             .single();
 
           if (!error && newDecision) {
-            // Create initial version
             await supabase.from("decision_versions").insert({
               decision_id: newDecision.id,
               version_num: 1,
-              text: decision.canonical_text,
-              change_reason: `Extracted from meeting: ${meeting_title || "Untitled"}`,
+              text: decision.canonical_text || decision.title,
+              change_reason: `Extracted from meeting: ${meeting_title}`,
             });
 
             createdDecisions.push(newDecision);
@@ -163,7 +174,7 @@ Extract and respond in JSON format:
       .from("update_events")
       .insert({
         type: "knowledge",
-        summary: `Meeting summary: ${meeting_title || "Untitled Meeting"}`,
+        summary: `Meeting summary: ${meeting_title}`,
         why_it_matters: meetingSummary.summary,
         impact_score: 0.6,
       })

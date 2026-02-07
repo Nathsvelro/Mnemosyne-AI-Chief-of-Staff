@@ -1,19 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-interface SearchRequest {
-  query: string;
-  match_threshold?: number;
-  match_count?: number;
-  source_type_filter?: string;
-  expand_graph?: boolean; // Whether to expand linked graph nodes
-  graph_hops?: number;
-}
+import { 
+  corsHeaders, 
+  authenticateRequest, 
+  unauthorizedResponse,
+  validateString,
+  validateNumber
+} from "../_shared/auth.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,6 +14,12 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate the request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse();
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
@@ -30,19 +29,15 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body: SearchRequest = await req.json();
-    const {
-      query,
-      match_threshold = 0.7,
-      match_count = 10,
-      source_type_filter,
-      expand_graph = true,
-      graph_hops = 2,
-    } = body;
-
-    if (!query) {
-      throw new Error("Query is required");
-    }
+    const body = await req.json();
+    
+    // Validate inputs
+    const query = validateString(body.query, "query", 2000);
+    const match_threshold = validateNumber(body.match_threshold ?? 0.7, "match_threshold", 0, 1);
+    const match_count = Math.min(validateNumber(body.match_count ?? 10, "match_count", 1, 50), 50);
+    const source_type_filter = body.source_type_filter ? validateString(body.source_type_filter, "source_type_filter", 100) : null;
+    const expand_graph = body.expand_graph !== false;
+    const graph_hops = Math.min(validateNumber(body.graph_hops ?? 2, "graph_hops", 1, 4), 4);
 
     // Generate embedding for the query
     const embeddingResponse = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
@@ -73,7 +68,7 @@ serve(async (req) => {
         query_embedding: queryEmbedding,
         match_threshold,
         match_count,
-        source_type_filter: source_type_filter || null,
+        source_type_filter,
       }
     );
 
@@ -91,9 +86,7 @@ serve(async (req) => {
     // Optionally expand graph context
     let graphContext: Record<string, unknown>[] = [];
     if (expand_graph && linkedNodeIds.size > 0) {
-      // For each linked node, get its graph neighborhood
       const graphPromises = Array.from(linkedNodeIds).slice(0, 5).map(async (nodeId) => {
-        // First, determine the entity type by checking each table
         const tables = ["persons", "teams", "topics", "decisions", "documents"];
         let entityType: string | null = null;
 
@@ -105,14 +98,13 @@ serve(async (req) => {
             .maybeSingle();
           
           if (data) {
-            entityType = table.slice(0, -1); // Remove 's' from table name
+            entityType = table.slice(0, -1);
             break;
           }
         }
 
         if (!entityType) return null;
 
-        // Get graph traversal for this node
         const { data: traversalData } = await supabase.rpc("graph_traverse", {
           start_entity_type: entityType,
           start_entity_id: nodeId,
@@ -149,7 +141,6 @@ serve(async (req) => {
         similarity: r.similarity,
         metadata: r.metadata,
         linked_node_ids: r.linked_node_ids,
-        // Citation format
         citation: `[${r.source_type}:${r.source_id}]`,
       })) || [],
       graph_context: graphContext,

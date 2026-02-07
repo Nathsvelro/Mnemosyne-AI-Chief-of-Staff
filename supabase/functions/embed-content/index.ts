@@ -1,22 +1,22 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { 
+  corsHeaders, 
+  authenticateRequest, 
+  unauthorizedResponse,
+  validateString,
+  validateUUID,
+  validateNumber,
+  validateArray
+} from "../_shared/auth.ts";
 
 interface EmbedRequest {
   content: string;
-  source_type: string; // 'document_chunk', 'node_summary', 'decision_record', 'sprint_artifact'
+  source_type: string;
   source_id: string;
   chunk_index?: number;
   metadata?: Record<string, unknown>;
   linked_node_ids?: string[];
-}
-
-interface BatchEmbedRequest {
-  items: EmbedRequest[];
 }
 
 serve(async (req) => {
@@ -25,6 +25,12 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate the request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse();
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
@@ -35,16 +41,32 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const items: EmbedRequest[] = body.items || [body];
+    
+    // Support both single item and batch
+    let items: EmbedRequest[] = [];
+    if (body.items) {
+      items = validateArray<EmbedRequest>(body.items, "items", 50);
+    } else if (body.content) {
+      items = [body];
+    }
 
     if (items.length === 0) {
       throw new Error("No content to embed");
     }
 
+    // Validate each item
+    const validatedItems = items.map((item, i) => ({
+      content: validateString(item.content, `items[${i}].content`, 50000),
+      source_type: validateString(item.source_type, `items[${i}].source_type`, 100),
+      source_id: validateUUID(item.source_id, `items[${i}].source_id`),
+      chunk_index: item.chunk_index !== undefined ? validateNumber(item.chunk_index, `items[${i}].chunk_index`, 0, 10000) : 0,
+      metadata: item.metadata || {},
+      linked_node_ids: item.linked_node_ids ? item.linked_node_ids.map((id, j) => validateUUID(id, `items[${i}].linked_node_ids[${j}]`)) : [],
+    }));
+
     // Generate embeddings using Lovable AI Gateway
     const embeddingResponses = await Promise.all(
-      items.map(async (item) => {
-        // Use the embedding-compatible endpoint
+      validatedItems.map(async (item) => {
         const response = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
           method: "POST",
           headers: {
@@ -53,7 +75,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             input: item.content,
-            model: "text-embedding-3-small", // OpenAI-compatible embedding model
+            model: "text-embedding-3-small",
           }),
         });
 
@@ -75,11 +97,11 @@ serve(async (req) => {
     const insertData = embeddingResponses.map(({ embedding, item }) => ({
       source_type: item.source_type,
       source_id: item.source_id,
-      chunk_index: item.chunk_index || 0,
+      chunk_index: item.chunk_index,
       embedding: embedding,
       content: item.content,
-      metadata: item.metadata || {},
-      linked_node_ids: item.linked_node_ids || [],
+      metadata: item.metadata,
+      linked_node_ids: item.linked_node_ids,
     }));
 
     const { data, error } = await supabase

@@ -1,10 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { 
+  corsHeaders, 
+  authenticateRequest, 
+  unauthorizedResponse,
+  validateString,
+  validateUUID
+} from "../_shared/auth.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,13 +14,20 @@ serve(async (req) => {
   }
 
   try {
-    const { raw_text, source, author_person_id } = await req.json();
+    // Authenticate the request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse();
+    }
 
-    if (!raw_text || typeof raw_text !== "string") {
-      return new Response(
-        JSON.stringify({ error: "Missing 'raw_text' string" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const body = await req.json();
+    
+    // Validate inputs
+    const raw_text = validateString(body.raw_text, "raw_text", 100000);
+    const source = body.source ? validateString(body.source, "source", 100) : "api";
+    let author_person_id = null;
+    if (body.author_person_id) {
+      author_person_id = validateUUID(body.author_person_id, "author_person_id");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -30,8 +39,8 @@ serve(async (req) => {
       .from("messages")
       .insert({
         raw_text,
-        source: source || "api",
-        author_person_id: author_person_id || null,
+        source,
+        author_person_id,
       })
       .select()
       .single();
@@ -95,7 +104,6 @@ Respond in JSON format with the structure:
         );
       }
       console.error("AI extraction failed:", response.status);
-      // Continue without AI extraction
       return new Response(
         JSON.stringify({
           message_id: message.id,
