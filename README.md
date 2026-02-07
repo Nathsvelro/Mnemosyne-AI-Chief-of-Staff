@@ -54,8 +54,6 @@ The goal is **better communication, not more communication**.
 
 ### 1. Organizational Knowledge Graph
 
-[Insert photo here]
-
 A continuously updated graph that connects:
 - People  
 - Teams  
@@ -74,7 +72,6 @@ This graph reveals:
 
 ### 2. Living Source of Truth
 
-[Insert photo here]
 
 All decisions and ideas are:
 - Structured  
@@ -91,8 +88,6 @@ Every change answers:
 ---
 
 ### 3. Agentic AI Architecture
-
-[Insert photo here]
 
 Mnemosyne operates through cooperating AI agents:
 
