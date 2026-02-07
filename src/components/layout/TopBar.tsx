@@ -1,4 +1,4 @@
-import { Search, Bell, User, Mic, ChevronDown, Loader2, X } from "lucide-react";
+import { Search, User, Mic, ChevronDown, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,8 @@ import {
 import { useState } from "react";
 import { useAI } from "@/hooks/use-ai";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { NotificationsPanel } from "./NotificationsPanel";
+import { AIChatDrawer } from "./AIChatDrawer";
 
 interface TopBarProps {
   onAskChiefOfStaff?: (query: string) => void;
@@ -49,12 +51,6 @@ export function TopBar({ onAskChiefOfStaff }: TopBarProps) {
 
     // Also call the optional callback
     onAskChiefOfStaff?.(query);
-  };
-
-  const handleCloseDialog = () => {
-    setIsAiDialogOpen(false);
-    // Keep conversation for next open, or clear it:
-    // setAiConversation([]);
   };
 
   return (
@@ -120,13 +116,13 @@ export function TopBar({ onAskChiefOfStaff }: TopBarProps) {
           </div>
         </form>
 
-        {/* Right: Notifications & User */}
-        <div className="flex items-center gap-3">
+        {/* Right: AI Chat, Notifications & User */}
+        <div className="flex items-center gap-2">
+          {/* AI Chat Drawer */}
+          <AIChatDrawer />
+
           {/* Notifications */}
-          <button className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-conflict" />
-          </button>
+          <NotificationsPanel />
 
           {/* User */}
           <button className="flex items-center gap-2 p-1.5 pr-3 rounded-lg hover:bg-secondary transition-colors">

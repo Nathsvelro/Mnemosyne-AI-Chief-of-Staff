@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Users, Briefcase, Target, FileText, FileCode, AlertTriangle, Minus, Plus, ExternalLink, MessageSquare, GitBranch, Clock, Zap } from "lucide-react";
+import { X, Users, Briefcase, Target, FileText, FileCode, AlertTriangle, Plus, ExternalLink, MessageSquare, GitBranch, Clock, Zap, Focus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EntityType } from "@/types/database";
 
@@ -28,6 +28,8 @@ interface SelectedNode {
     loadScore?: number;
     confidence?: number;
     description?: string;
+    hasConflict?: boolean;
+    isBottleneck?: boolean;
   };
   connections?: string[];
 }
@@ -39,6 +41,16 @@ const nodeTypeConfig: Record<EntityType, { icon: typeof Users; label: string; co
   decision: { icon: FileText, label: "Decisions", color: "text-success" },
   document: { icon: FileCode, label: "Documents", color: "text-info" },
 };
+
+// People for center focus
+const focusPeople = [
+  { id: "ceo-1", name: "Nathaniel Velazquez", role: "CEO" },
+  { id: "vp-eng", name: "Sarah Chen", role: "VP Engineering" },
+  { id: "vp-prod", name: "Marcus Johnson", role: "Head of Product" },
+  { id: "vp-sales", name: "Lisa Thompson", role: "VP Sales" },
+  { id: "vp-mktg", name: "David Kim", role: "CMO" },
+  { id: "vp-design", name: "Emily Rodriguez", role: "Design Director" },
+];
 
 // Mock teams for filter dropdown
 const mockTeams = [
@@ -77,8 +89,9 @@ const GraphPage = () => {
   const [showConflictsOnly, setShowConflictsOnly] = useState(false);
   const [showBottlenecksOnly, setShowBottlenecksOnly] = useState(false);
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
-  const [activeTab, setActiveTab] = useState("flow");
+  const [activeTab, setActiveTab] = useState<"flow" | "bottlenecks" | "diff">("flow");
   const [selectedTeam, setSelectedTeam] = useState("all");
+  const [centerNodeId, setCenterNodeId] = useState<string | null>(null);
 
   const toggleNodeType = (type: EntityType) => {
     setNodeFilters(prev => ({ ...prev, [type]: !prev[type] }));
@@ -92,6 +105,10 @@ const GraphPage = () => {
       metadata: node.metadata,
       connections: node.connections,
     });
+  };
+
+  const handleCenterOnNode = (nodeId: string) => {
+    setCenterNodeId(nodeId === centerNodeId ? null : nodeId);
   };
 
   const getStatusColor = (status?: string) => {
@@ -117,16 +134,60 @@ const GraphPage = () => {
     return "text-success";
   };
 
+  // Handle view mode changes
+  const handleViewModeChange = (mode: string) => {
+    setActiveTab(mode as "flow" | "bottlenecks" | "diff");
+    
+    if (mode === "bottlenecks") {
+      setShowBottlenecksOnly(true);
+      setShowConflictsOnly(false);
+    } else {
+      setShowBottlenecksOnly(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="h-full flex gap-4 animate-fade-in">
         {/* Left Panel: Filters */}
-        <div className="w-72 shrink-0 space-y-5 bg-card/50 rounded-xl border border-border p-4">
+        <div className="w-72 shrink-0 space-y-5 bg-card/50 rounded-xl border border-border p-4 overflow-y-auto">
           <div>
             <h1 className="text-lg font-bold text-foreground">Knowledge Graph</h1>
             <p className="text-xs text-muted-foreground mt-1">
               Visualize stakeholders, dependencies & knowledge flow
             </p>
+          </div>
+
+          {/* Focus Center */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <Focus className="w-3 h-3" />
+              Focus on Person
+            </Label>
+            <Select 
+              value={centerNodeId || "none"} 
+              onValueChange={(val) => setCenterNodeId(val === "none" ? null : val)}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Select person to focus" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Show all (no focus)</SelectItem>
+                {focusPeople.map(person => (
+                  <SelectItem key={person.id} value={person.id}>
+                    <div className="flex flex-col">
+                      <span>{person.name}</span>
+                      <span className="text-[10px] text-muted-foreground">{person.role}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {centerNodeId && (
+              <p className="text-[10px] text-primary">
+                Showing connections for {focusPeople.find(p => p.id === centerNodeId)?.name}
+              </p>
+            )}
           </div>
 
           {/* Time Range */}
@@ -185,29 +246,45 @@ const GraphPage = () => {
             <Label className="text-xs text-muted-foreground">Special Views</Label>
             <div className="space-y-2">
               <div className={cn(
-                "flex items-center justify-between p-2.5 rounded-lg border transition-all",
-                showConflictsOnly ? "bg-conflict/10 border-conflict/30" : "bg-secondary/50 border-border"
-              )}>
+                "flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer",
+                showConflictsOnly ? "bg-conflict/10 border-conflict/30" : "bg-secondary/50 border-border hover:bg-secondary"
+              )}
+              onClick={() => {
+                setShowConflictsOnly(!showConflictsOnly);
+                if (!showConflictsOnly) setShowBottlenecksOnly(false);
+              }}
+              >
                 <div className="flex items-center gap-2">
                   <AlertTriangle className={cn("w-4 h-4", showConflictsOnly ? "text-conflict" : "text-muted-foreground")} />
                   <span className="text-sm text-foreground">Conflicts only</span>
                 </div>
                 <Switch 
                   checked={showConflictsOnly} 
-                  onCheckedChange={setShowConflictsOnly}
+                  onCheckedChange={(val) => {
+                    setShowConflictsOnly(val);
+                    if (val) setShowBottlenecksOnly(false);
+                  }}
                 />
               </div>
               <div className={cn(
-                "flex items-center justify-between p-2.5 rounded-lg border transition-all",
-                showBottlenecksOnly ? "bg-warning/10 border-warning/30" : "bg-secondary/50 border-border"
-              )}>
+                "flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer",
+                showBottlenecksOnly ? "bg-warning/10 border-warning/30" : "bg-secondary/50 border-border hover:bg-secondary"
+              )}
+              onClick={() => {
+                setShowBottlenecksOnly(!showBottlenecksOnly);
+                if (!showBottlenecksOnly) setShowConflictsOnly(false);
+              }}
+              >
                 <div className="flex items-center gap-2">
                   <Zap className={cn("w-4 h-4", showBottlenecksOnly ? "text-warning" : "text-muted-foreground")} />
                   <span className="text-sm text-foreground">Bottlenecks only</span>
                 </div>
                 <Switch 
                   checked={showBottlenecksOnly} 
-                  onCheckedChange={setShowBottlenecksOnly}
+                  onCheckedChange={(val) => {
+                    setShowBottlenecksOnly(val);
+                    if (val) setShowConflictsOnly(false);
+                  }}
                 />
               </div>
             </div>
@@ -228,13 +305,35 @@ const GraphPage = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Reset filters */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full"
+            onClick={() => {
+              setNodeFilters({
+                person: true,
+                team: true,
+                topic: true,
+                decision: true,
+                document: true,
+              });
+              setShowConflictsOnly(false);
+              setShowBottlenecksOnly(false);
+              setSelectedTeam("all");
+              setCenterNodeId(null);
+            }}
+          >
+            Reset all filters
+          </Button>
         </div>
 
         {/* Graph Canvas */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* View Tabs */}
           <div className="mb-3 flex items-center justify-between">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs value={activeTab} onValueChange={handleViewModeChange}>
               <TabsList>
                 <TabsTrigger value="flow" className="gap-1.5">
                   <GitBranch className="w-3.5 h-3.5" />
@@ -252,7 +351,7 @@ const GraphPage = () => {
             </Tabs>
             
             <div className="text-xs text-muted-foreground">
-              Click nodes to inspect • Drag to pan • Scroll to zoom
+              Click nodes to inspect • Scroll to zoom • Drag to pan
             </div>
           </div>
 
@@ -262,6 +361,11 @@ const GraphPage = () => {
               className="h-full" 
               onNodeClick={handleNodeClick}
               nodeFilters={nodeFilters}
+              centerNodeId={centerNodeId}
+              showConflictsOnly={showConflictsOnly}
+              showBottlenecksOnly={showBottlenecksOnly}
+              teamFilter={selectedTeam}
+              viewMode={activeTab}
             />
           </div>
         </div>
@@ -278,14 +382,25 @@ const GraphPage = () => {
                 })()}
                 <span className="font-semibold text-foreground text-sm truncate">{selectedNode.label}</span>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7 shrink-0"
-                onClick={() => setSelectedNode(null)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 shrink-0"
+                  onClick={() => handleCenterOnNode(selectedNode.id)}
+                  title="Focus graph on this node"
+                >
+                  <Focus className={cn("w-4 h-4", centerNodeId === selectedNode.id ? "text-primary" : "")} />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 shrink-0"
+                  onClick={() => setSelectedNode(null)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             <ScrollArea className="flex-1">
@@ -303,6 +418,16 @@ const GraphPage = () => {
                   {selectedNode.metadata?.loadScore && selectedNode.metadata.loadScore > 75 && (
                     <Badge className="bg-destructive/20 text-destructive border-destructive/30">
                       High Load
+                    </Badge>
+                  )}
+                  {selectedNode.metadata?.hasConflict && (
+                    <Badge className="bg-conflict/20 text-conflict border-conflict/30">
+                      Conflict
+                    </Badge>
+                  )}
+                  {selectedNode.metadata?.isBottleneck && (
+                    <Badge className="bg-warning/20 text-warning border-warning/30">
+                      Bottleneck
                     </Badge>
                   )}
                 </div>
