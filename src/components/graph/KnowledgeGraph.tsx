@@ -40,13 +40,13 @@ interface KnowledgeGraphProps {
   viewMode?: "flow" | "bottlenecks" | "diff";
 }
 
-// Color scheme matching Knowledge Graph style - teal/green theme
-const nodeColors: Record<EntityType, { bg: string; border: string; label: string; icon: 'person' | 'institution' | 'document' | 'topic' | 'decision' }> = {
-  person: { bg: "#14b8a6", border: "#2dd4bf", label: "People", icon: "person" },           // Teal
-  team: { bg: "#14b8a6", border: "#2dd4bf", label: "Organizations", icon: "institution" }, // Teal (institution icon)
-  decision: { bg: "#14b8a6", border: "#2dd4bf", label: "Decisions", icon: "decision" },    // Teal
-  topic: { bg: "#6b7280", border: "#9ca3af", label: "Topics", icon: "topic" },             // Gray (satellite nodes)
-  document: { bg: "#14b8a6", border: "#2dd4bf", label: "Documents", icon: "document" },   // Teal
+// Color scheme - distinct colors per node type
+const nodeColors: Record<EntityType, { bg: string; border: string; fill: string; label: string; icon: 'person' | 'institution' | 'document' | 'topic' | 'decision' }> = {
+  person: { bg: "#0369a1", border: "#0ea5e9", fill: "#38bdf8", label: "People", icon: "person" },           // Sky blue
+  team: { bg: "#166534", border: "#22c55e", fill: "#4ade80", label: "Organizations", icon: "institution" }, // Green
+  decision: { bg: "#b45309", border: "#f59e0b", fill: "#fbbf24", label: "Decisions", icon: "decision" },    // Amber
+  topic: { bg: "#7c3aed", border: "#a78bfa", fill: "#c4b5fd", label: "Topics", icon: "topic" },             // Purple
+  document: { bg: "#0e7490", border: "#06b6d4", fill: "#22d3ee", label: "Documents", icon: "document" },   // Cyan
 };
 
 // Extended default nodes with realistic data
@@ -524,22 +524,12 @@ export function KnowledgeGraph({
       <div className="absolute bottom-4 left-4 z-20 bg-card/90 backdrop-blur-sm rounded-lg p-3 border border-border">
         <div className="text-xs text-muted-foreground mb-2 font-medium">Entity Types</div>
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#14b8a6" }} />
-            <span className="text-xs text-foreground">People</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#14b8a6" }} />
-            <span className="text-xs text-foreground">Organizations</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#14b8a6" }} />
-            <span className="text-xs text-foreground">Decisions</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#6b7280" }} />
-            <span className="text-xs text-foreground">Topics</span>
-          </div>
+          {Object.entries(nodeColors).map(([type, colors]) => (
+            <div key={type} className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colors.border }} />
+              <span className="text-xs text-foreground">{colors.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -669,8 +659,8 @@ export function KnowledgeGraph({
                         {/* Circle background */}
                         <circle
                           r={size / 2}
-                          fill="#0f766e"
-                          stroke="#14b8a6"
+                          fill={colors.bg}
+                          stroke={colors.border}
                           strokeWidth={3}
                         />
                         {/* Person silhouette icon */}
@@ -680,14 +670,14 @@ export function KnowledgeGraph({
                             cx={0}
                             cy={-size * 0.12}
                             r={size * 0.15}
-                            fill="#14b8a6"
+                            fill={colors.fill}
                           />
                           {/* Body/shoulders */}
                           <path
                             d={`M ${-size * 0.25} ${size * 0.22} 
                                 Q ${-size * 0.25} ${size * 0.02}, 0 ${size * 0.02}
                                 Q ${size * 0.25} ${size * 0.02}, ${size * 0.25} ${size * 0.22}`}
-                            fill="#14b8a6"
+                            fill={colors.fill}
                           />
                         </g>
                         {/* Badge label below */}
@@ -698,8 +688,8 @@ export function KnowledgeGraph({
                             width={Math.max(node.label.length * 7, 80)}
                             height={16}
                             rx={3}
-                            fill="#0f766e"
-                            stroke="#14b8a6"
+                            fill={colors.bg}
+                            stroke={colors.border}
                             strokeWidth={1}
                           />
                           <text
@@ -722,8 +712,8 @@ export function KnowledgeGraph({
                         {/* Circle background */}
                         <circle
                           r={size / 2}
-                          fill="#0f766e"
-                          stroke="#14b8a6"
+                          fill={colors.bg}
+                          stroke={colors.border}
                           strokeWidth={3}
                         />
                         {/* Institution building icon */}
@@ -733,14 +723,14 @@ export function KnowledgeGraph({
                             d={`M 0 ${-size * 0.28} 
                                 L ${size * 0.28} ${-size * 0.1}
                                 L ${-size * 0.28} ${-size * 0.1} Z`}
-                            fill="#14b8a6"
+                            fill={colors.fill}
                           />
                           {/* Columns */}
-                          <rect x={-size * 0.22} y={-size * 0.1} width={size * 0.1} height={size * 0.32} fill="#14b8a6" />
-                          <rect x={-size * 0.05} y={-size * 0.1} width={size * 0.1} height={size * 0.32} fill="#14b8a6" />
-                          <rect x={size * 0.12} y={-size * 0.1} width={size * 0.1} height={size * 0.32} fill="#14b8a6" />
+                          <rect x={-size * 0.22} y={-size * 0.1} width={size * 0.1} height={size * 0.32} fill={colors.fill} />
+                          <rect x={-size * 0.05} y={-size * 0.1} width={size * 0.1} height={size * 0.32} fill={colors.fill} />
+                          <rect x={size * 0.12} y={-size * 0.1} width={size * 0.1} height={size * 0.32} fill={colors.fill} />
                           {/* Base */}
-                          <rect x={-size * 0.3} y={size * 0.18} width={size * 0.6} height={size * 0.08} fill="#14b8a6" />
+                          <rect x={-size * 0.3} y={size * 0.18} width={size * 0.6} height={size * 0.08} fill={colors.fill} />
                         </g>
                         {/* Badge label below */}
                         <g transform={`translate(0, ${size / 2 + 12})`}>
@@ -750,8 +740,8 @@ export function KnowledgeGraph({
                             width={Math.max(node.label.length * 7, 70)}
                             height={16}
                             rx={3}
-                            fill="#0f766e"
-                            stroke="#14b8a6"
+                            fill={colors.bg}
+                            stroke={colors.border}
                             strokeWidth={1}
                           />
                           <text
@@ -773,8 +763,8 @@ export function KnowledgeGraph({
                       <>
                         <circle
                           r={size / 2}
-                          fill="#0f766e"
-                          stroke="#14b8a6"
+                          fill={colors.bg}
+                          stroke={colors.border}
                           strokeWidth={3}
                         />
                         {/* Document icon */}
@@ -784,7 +774,7 @@ export function KnowledgeGraph({
                           width={size * 0.36}
                           height={size * 0.44}
                           rx={2}
-                          fill="#14b8a6"
+                          fill={colors.fill}
                         />
                         {/* Checkmark */}
                         <path
@@ -792,7 +782,7 @@ export function KnowledgeGraph({
                               L ${-size * 0.02} ${size * 0.1} 
                               L ${size * 0.1} ${-size * 0.06}`}
                           fill="none"
-                          stroke="#0f766e"
+                          stroke={colors.bg}
                           strokeWidth={2.5}
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -805,8 +795,8 @@ export function KnowledgeGraph({
                             width={Math.max(node.label.length * 6, 60)}
                             height={16}
                             rx={3}
-                            fill="#0f766e"
-                            stroke="#14b8a6"
+                            fill={colors.bg}
+                            stroke={colors.border}
                             strokeWidth={1}
                           />
                           <text
@@ -828,8 +818,8 @@ export function KnowledgeGraph({
                       <>
                         <circle
                           r={size / 2}
-                          fill="#0f766e"
-                          stroke="#14b8a6"
+                          fill={colors.bg}
+                          stroke={colors.border}
                           strokeWidth={3}
                         />
                         {/* Document icon with lines */}
@@ -839,11 +829,11 @@ export function KnowledgeGraph({
                           width={size * 0.36}
                           height={size * 0.44}
                           rx={2}
-                          fill="#14b8a6"
+                          fill={colors.fill}
                         />
-                        <line x1={-size * 0.1} y1={-size * 0.1} x2={size * 0.1} y2={-size * 0.1} stroke="#0f766e" strokeWidth={2} />
-                        <line x1={-size * 0.1} y1={size * 0.02} x2={size * 0.1} y2={size * 0.02} stroke="#0f766e" strokeWidth={2} />
-                        <line x1={-size * 0.1} y1={size * 0.14} x2={size * 0.06} y2={size * 0.14} stroke="#0f766e" strokeWidth={2} />
+                        <line x1={-size * 0.1} y1={-size * 0.1} x2={size * 0.1} y2={-size * 0.1} stroke={colors.bg} strokeWidth={2} />
+                        <line x1={-size * 0.1} y1={size * 0.02} x2={size * 0.1} y2={size * 0.02} stroke={colors.bg} strokeWidth={2} />
+                        <line x1={-size * 0.1} y1={size * 0.14} x2={size * 0.06} y2={size * 0.14} stroke={colors.bg} strokeWidth={2} />
                         {/* Badge */}
                         <g transform={`translate(0, ${size / 2 + 12})`}>
                           <rect
@@ -852,8 +842,8 @@ export function KnowledgeGraph({
                             width={Math.max(node.label.length * 6, 60)}
                             height={16}
                             rx={3}
-                            fill="#0f766e"
-                            stroke="#14b8a6"
+                            fill={colors.bg}
+                            stroke={colors.border}
                             strokeWidth={1}
                           />
                           <text
@@ -875,8 +865,8 @@ export function KnowledgeGraph({
                       <>
                         <circle
                           r={size / 2}
-                          fill="#374151"
-                          stroke="#6b7280"
+                          fill={colors.bg}
+                          stroke={colors.border}
                           strokeWidth={3}
                         />
                         <text
@@ -897,8 +887,8 @@ export function KnowledgeGraph({
                             width={Math.max(node.label.length * 6, 60)}
                             height={16}
                             rx={3}
-                            fill="#374151"
-                            stroke="#6b7280"
+                            fill={colors.bg}
+                            stroke={colors.border}
                             strokeWidth={1}
                           />
                           <text
