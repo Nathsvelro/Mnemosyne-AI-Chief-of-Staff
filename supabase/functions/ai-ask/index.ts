@@ -112,24 +112,43 @@ const tools = [
 // Tool execution functions
 async function executeSearchKnowledge(supabase: any, args: { query: string; limit?: number }) {
   const limit = Math.min(args.limit || 10, 25);
-  const query = args.query.toLowerCase();
+  
+  // Extract key terms for better search (split on spaces, filter short words)
+  const terms = args.query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+  const searchTerms = terms.slice(0, 3); // Use first 3 meaningful terms
+  
+  // Build OR conditions for each term
+  const buildFilter = (columns: string[]) => {
+    const conditions: string[] = [];
+    for (const term of searchTerms) {
+      for (const col of columns) {
+        conditions.push(`${col}.ilike.%${term}%`);
+      }
+    }
+    return conditions.join(',');
+  };
 
-  // Search across decisions, topics, and persons
-  const [decisionsRes, topicsRes, personsRes] = await Promise.all([
+  // Search across decisions, topics, persons, and teams
+  const [decisionsRes, topicsRes, personsRes, teamsRes] = await Promise.all([
     supabase
       .from("decisions")
-      .select("id, title, canonical_text, status, confidence")
-      .or(`title.ilike.%${query}%,canonical_text.ilike.%${query}%`)
+      .select("id, title, canonical_text, status, confidence, owner_person_id")
+      .or(buildFilter(['title', 'canonical_text']))
       .limit(limit),
     supabase
       .from("topics")
       .select("id, name, description")
-      .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+      .or(buildFilter(['name', 'description']))
       .limit(limit),
     supabase
       .from("persons")
-      .select("id, name, role, email")
-      .or(`name.ilike.%${query}%,role.ilike.%${query}%`)
+      .select("id, name, role, email, team_id, load_score")
+      .or(buildFilter(['name', 'role']))
+      .limit(limit),
+    supabase
+      .from("teams")
+      .select("id, name, description")
+      .or(buildFilter(['name', 'description']))
       .limit(limit),
   ]);
 
@@ -141,8 +160,10 @@ async function executeSearchKnowledge(supabase: any, args: { query: string; limi
         id: d.id,
         entityType: "Decision",
         title: d.title,
-        snippet: d.canonical_text?.substring(0, 200) || "",
+        snippet: d.canonical_text?.substring(0, 250) || "",
+        status: d.status,
         confidence: d.confidence || 0.5,
+        owner_person_id: d.owner_person_id,
         deepLink: `/decisions?selected=${d.id}`,
       });
     }
@@ -154,7 +175,7 @@ async function executeSearchKnowledge(supabase: any, args: { query: string; limi
         id: t.id,
         entityType: "Topic",
         title: t.name,
-        snippet: t.description?.substring(0, 200) || "",
+        snippet: t.description?.substring(0, 250) || "",
         confidence: 0.7,
         deepLink: `/graph?focus=topic:${t.id}`,
       });
@@ -167,13 +188,28 @@ async function executeSearchKnowledge(supabase: any, args: { query: string; limi
         id: p.id,
         entityType: "Person",
         title: p.name,
-        snippet: `${p.role || ""} - ${p.email || ""}`,
+        snippet: `${p.role || "Unknown role"} | ${p.email || "No email"} | Load: ${p.load_score || 0}%`,
+        team_id: p.team_id,
         confidence: 0.8,
         deepLink: `/graph?focus=person:${p.id}`,
       });
     }
   }
 
+  if (teamsRes.data) {
+    for (const t of teamsRes.data) {
+      results.push({
+        id: t.id,
+        entityType: "Team",
+        title: t.name,
+        snippet: t.description?.substring(0, 250) || "",
+        confidence: 0.75,
+        deepLink: `/graph?focus=team:${t.id}`,
+      });
+    }
+  }
+
+  console.log(`Search for "${args.query}" found ${results.length} results`);
   return { results: results.slice(0, limit) };
 }
 
@@ -453,7 +489,7 @@ Keep responses concise and actionable. When creating or modifying organizational
     const uiSuggestions: any[] = [];
     let finalAnswer = "";
     let iterations = 0;
-    const maxIterations = 5;
+    const maxIterations = 8;
 
     // Tool-calling loop
     while (iterations < maxIterations) {
@@ -570,6 +606,32 @@ Keep responses concise and actionable. When creating or modifying organizational
       // No tool calls - we have the final answer
       finalAnswer = choice.message?.content || "";
       break;
+    }
+
+    // If we hit max iterations without a final answer, generate a summary
+    if (!finalAnswer) {
+      console.log("Max iterations reached, generating fallback response");
+      
+      // Make one final call without tools to force a response
+      const fallbackResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            ...messages,
+            { role: "user", content: "Based on all the information gathered, please provide a concise summary answer to the original question. Do not call any more tools." }
+          ],
+        }),
+      });
+
+      if (fallbackResponse.ok) {
+        const fallbackData = await fallbackResponse.json();
+        finalAnswer = fallbackData.choices?.[0]?.message?.content || "I found some relevant information but couldn't synthesize a complete answer. Please try a more specific question.";
+      }
     }
 
     return new Response(
