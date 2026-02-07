@@ -60,6 +60,20 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Navigation guide
+
+Use this quick map to move through the application’s main pages and understand what each view is for.
+
+| Route | Page | Purpose |
+| --- | --- | --- |
+| `/` or `/home` | Org Pulse | Executive overview with today’s brief, key alerts, and the action queue. |
+| `/graph` | Knowledge Graph | Interactive knowledge map with filters for time range, node type, conflicts, and bottlenecks. |
+| `/decisions` | Decision Log | Searchable, sortable decision registry with status, owners, and affected teams. |
+| `/updates` | Updates | Strategic update feed highlighting impact, subscribers, and recommended actions. |
+| `/inbox` | Inbox | Routed items that need attention, with quick actions to view, snooze, delegate, or mark FYI. |
+| `/admin` | Admin & Setup | Organization settings, connectors, policies, retention, and CEO view configuration. |
+| `*` | Not Found | Catch-all route for unknown paths. |
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
