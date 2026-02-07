@@ -207,6 +207,114 @@ export type Database = {
           },
         ]
       }
+      embeddings: {
+        Row: {
+          chunk_index: number | null
+          content: string
+          created_at: string
+          embedding: string
+          id: string
+          linked_node_ids: string[] | null
+          metadata: Json | null
+          source_id: string
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          chunk_index?: number | null
+          content: string
+          created_at?: string
+          embedding: string
+          id?: string
+          linked_node_ids?: string[] | null
+          metadata?: Json | null
+          source_id: string
+          source_type: string
+          updated_at?: string
+        }
+        Update: {
+          chunk_index?: number | null
+          content?: string
+          created_at?: string
+          embedding?: string
+          id?: string
+          linked_node_ids?: string[] | null
+          metadata?: Json | null
+          source_id?: string
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      experiments: {
+        Row: {
+          created_at: string
+          data_collected: Json | null
+          end_date: string | null
+          hypothesis: string
+          id: string
+          idea_id: string | null
+          methodology: string | null
+          outcome: string | null
+          results_summary: string | null
+          sprint_id: string | null
+          start_date: string | null
+          status: string
+          success_metrics: Json | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_collected?: Json | null
+          end_date?: string | null
+          hypothesis: string
+          id?: string
+          idea_id?: string | null
+          methodology?: string | null
+          outcome?: string | null
+          results_summary?: string | null
+          sprint_id?: string | null
+          start_date?: string | null
+          status?: string
+          success_metrics?: Json | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_collected?: Json | null
+          end_date?: string | null
+          hypothesis?: string
+          id?: string
+          idea_id?: string | null
+          methodology?: string | null
+          outcome?: string | null
+          results_summary?: string | null
+          sprint_id?: string | null
+          start_date?: string | null
+          status?: string
+          success_metrics?: Json | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experiments_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "experiments_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       graph_edges: {
         Row: {
           created_at: string
@@ -242,6 +350,69 @@ export type Database = {
           weight?: number | null
         }
         Relationships: []
+      }
+      ideas: {
+        Row: {
+          created_at: string
+          description: string | null
+          downvotes: number | null
+          hypothesis: string | null
+          id: string
+          measurement_plan: string | null
+          proposer_person_id: string | null
+          sprint_id: string | null
+          status: Database["public"]["Enums"]["idea_status"]
+          success_criteria: string | null
+          title: string
+          updated_at: string
+          upvotes: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          downvotes?: number | null
+          hypothesis?: string | null
+          id?: string
+          measurement_plan?: string | null
+          proposer_person_id?: string | null
+          sprint_id?: string | null
+          status?: Database["public"]["Enums"]["idea_status"]
+          success_criteria?: string | null
+          title: string
+          updated_at?: string
+          upvotes?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          downvotes?: number | null
+          hypothesis?: string | null
+          id?: string
+          measurement_plan?: string | null
+          proposer_person_id?: string | null
+          sprint_id?: string | null
+          status?: Database["public"]["Enums"]["idea_status"]
+          success_criteria?: string | null
+          title?: string
+          updated_at?: string
+          upvotes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ideas_proposer_person_id_fkey"
+            columns: ["proposer_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ideas_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -390,6 +561,103 @@ export type Database = {
           },
         ]
       }
+      sprint_linked_nodes: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          id: string
+          link_reason: string | null
+          sprint_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          link_reason?: string | null
+          sprint_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          link_reason?: string | null
+          sprint_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sprint_linked_nodes_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sprints: {
+        Row: {
+          ai_analysis: Json | null
+          created_at: string
+          description: string | null
+          id: string
+          owner_person_id: string | null
+          problem_statement: string | null
+          progress: number | null
+          risks_assumptions: string | null
+          source: Database["public"]["Enums"]["sprint_source"]
+          stakeholder_impact: string | null
+          status: Database["public"]["Enums"]["sprint_status"]
+          strategic_alignment: string | null
+          title: string
+          updated_at: string
+          votes: number | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          owner_person_id?: string | null
+          problem_statement?: string | null
+          progress?: number | null
+          risks_assumptions?: string | null
+          source?: Database["public"]["Enums"]["sprint_source"]
+          stakeholder_impact?: string | null
+          status?: Database["public"]["Enums"]["sprint_status"]
+          strategic_alignment?: string | null
+          title: string
+          updated_at?: string
+          votes?: number | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          owner_person_id?: string | null
+          problem_statement?: string | null
+          progress?: number | null
+          risks_assumptions?: string | null
+          source?: Database["public"]["Enums"]["sprint_source"]
+          stakeholder_impact?: string | null
+          status?: Database["public"]["Enums"]["sprint_status"]
+          strategic_alignment?: string | null
+          title?: string
+          updated_at?: string
+          votes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sprints_owner_person_id_fkey"
+            columns: ["owner_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           created_at: string
@@ -419,6 +687,56 @@ export type Database = {
           {
             foreignKeyName: "fk_teams_lead_person"
             columns: ["lead_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timeline_events: {
+        Row: {
+          actor_name: string | null
+          actor_person_id: string | null
+          ai_insight: string | null
+          created_at: string
+          description: string | null
+          details: Json | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          event_type: Database["public"]["Enums"]["timeline_event_type"]
+          id: string
+          title: string
+        }
+        Insert: {
+          actor_name?: string | null
+          actor_person_id?: string | null
+          ai_insight?: string | null
+          created_at?: string
+          description?: string | null
+          details?: Json | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          event_type: Database["public"]["Enums"]["timeline_event_type"]
+          id?: string
+          title: string
+        }
+        Update: {
+          actor_name?: string | null
+          actor_person_id?: string | null
+          ai_insight?: string | null
+          created_at?: string
+          description?: string | null
+          details?: Json | null
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          event_type?: Database["public"]["Enums"]["timeline_event_type"]
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timeline_events_actor_person_id_fkey"
+            columns: ["actor_person_id"]
             isOneToOne: false
             referencedRelation: "persons"
             referencedColumns: ["id"]
@@ -508,12 +826,119 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_proposals: {
+        Row: {
+          affected_node_ids: string[] | null
+          alternatives: string[] | null
+          confidence: number | null
+          created_at: string
+          description: string
+          effort: string
+          id: string
+          impact: string
+          implementation_plan: string | null
+          proposal_type: Database["public"]["Enums"]["proposal_type"]
+          reasoning: string
+          review_notes: string | null
+          reviewed_by_person_id: string | null
+          rollback_plan: string | null
+          status: Database["public"]["Enums"]["proposal_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          affected_node_ids?: string[] | null
+          alternatives?: string[] | null
+          confidence?: number | null
+          created_at?: string
+          description: string
+          effort?: string
+          id?: string
+          impact?: string
+          implementation_plan?: string | null
+          proposal_type: Database["public"]["Enums"]["proposal_type"]
+          reasoning: string
+          review_notes?: string | null
+          reviewed_by_person_id?: string | null
+          rollback_plan?: string | null
+          status?: Database["public"]["Enums"]["proposal_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          affected_node_ids?: string[] | null
+          alternatives?: string[] | null
+          confidence?: number | null
+          created_at?: string
+          description?: string
+          effort?: string
+          id?: string
+          impact?: string
+          implementation_plan?: string | null
+          proposal_type?: Database["public"]["Enums"]["proposal_type"]
+          reasoning?: string
+          review_notes?: string | null
+          reviewed_by_person_id?: string | null
+          rollback_plan?: string | null
+          status?: Database["public"]["Enums"]["proposal_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_proposals_reviewed_by_person_id_fkey"
+            columns: ["reviewed_by_person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_entity_details: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: Database["public"]["Enums"]["entity_type"]
+        }
+        Returns: Json
+      }
+      graph_traverse: {
+        Args: {
+          edge_filter?: Database["public"]["Enums"]["edge_type"][]
+          max_hops?: number
+          start_entity_id: string
+          start_entity_type: Database["public"]["Enums"]["entity_type"]
+        }
+        Returns: {
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          hop_level: number
+          via_edge_id: string
+          via_edge_type: Database["public"]["Enums"]["edge_type"]
+        }[]
+      }
+      semantic_search: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+          source_type_filter?: string
+        }
+        Returns: {
+          chunk_index: number
+          content: string
+          id: string
+          linked_node_ids: string[]
+          metadata: Json
+          similarity: number
+          source_id: string
+          source_type: string
+        }[]
+      }
     }
     Enums: {
       conflict_status: "open" | "resolved" | "dismissed"
@@ -524,7 +949,72 @@ export type Database = {
         | "depends_on"
         | "references"
         | "contradicts"
-      entity_type: "person" | "team" | "topic" | "decision" | "document"
+        | "aligns_with"
+        | "impacts"
+        | "governs"
+        | "measures"
+        | "blocks"
+        | "derived_from"
+        | "replaces"
+        | "supersedes"
+        | "uses_system"
+        | "risk_of"
+      entity_type:
+        | "person"
+        | "team"
+        | "topic"
+        | "decision"
+        | "document"
+        | "initiative"
+        | "process"
+        | "risk"
+        | "system"
+        | "kpi"
+        | "idea"
+        | "experiment"
+        | "sprint"
+      idea_status:
+        | "proposed"
+        | "exploring"
+        | "validated"
+        | "rejected"
+        | "implemented"
+      proposal_status:
+        | "draft"
+        | "pending_review"
+        | "approved"
+        | "rejected"
+        | "implemented"
+      proposal_type:
+        | "optimization"
+        | "governance"
+        | "role"
+        | "process"
+        | "redundancy"
+        | "automation"
+      sprint_source:
+        | "trend"
+        | "pain_point"
+        | "conflict"
+        | "crisis"
+        | "opportunity"
+        | "strategic"
+      sprint_status: "draft" | "active" | "review" | "completed" | "cancelled"
+      timeline_event_type:
+        | "decision_created"
+        | "decision_updated"
+        | "decision_deprecated"
+        | "conflict_opened"
+        | "conflict_resolved"
+        | "initiative_started"
+        | "initiative_ended"
+        | "sprint_created"
+        | "sprint_completed"
+        | "idea_proposed"
+        | "experiment_completed"
+        | "team_change"
+        | "knowledge_update"
+        | "system_event"
       update_event_type: "decision" | "knowledge" | "stakeholder" | "risk"
     }
     CompositeTypes: {
@@ -661,8 +1151,79 @@ export const Constants = {
         "depends_on",
         "references",
         "contradicts",
+        "aligns_with",
+        "impacts",
+        "governs",
+        "measures",
+        "blocks",
+        "derived_from",
+        "replaces",
+        "supersedes",
+        "uses_system",
+        "risk_of",
       ],
-      entity_type: ["person", "team", "topic", "decision", "document"],
+      entity_type: [
+        "person",
+        "team",
+        "topic",
+        "decision",
+        "document",
+        "initiative",
+        "process",
+        "risk",
+        "system",
+        "kpi",
+        "idea",
+        "experiment",
+        "sprint",
+      ],
+      idea_status: [
+        "proposed",
+        "exploring",
+        "validated",
+        "rejected",
+        "implemented",
+      ],
+      proposal_status: [
+        "draft",
+        "pending_review",
+        "approved",
+        "rejected",
+        "implemented",
+      ],
+      proposal_type: [
+        "optimization",
+        "governance",
+        "role",
+        "process",
+        "redundancy",
+        "automation",
+      ],
+      sprint_source: [
+        "trend",
+        "pain_point",
+        "conflict",
+        "crisis",
+        "opportunity",
+        "strategic",
+      ],
+      sprint_status: ["draft", "active", "review", "completed", "cancelled"],
+      timeline_event_type: [
+        "decision_created",
+        "decision_updated",
+        "decision_deprecated",
+        "conflict_opened",
+        "conflict_resolved",
+        "initiative_started",
+        "initiative_ended",
+        "sprint_created",
+        "sprint_completed",
+        "idea_proposed",
+        "experiment_completed",
+        "team_change",
+        "knowledge_update",
+        "system_event",
+      ],
       update_event_type: ["decision", "knowledge", "stakeholder", "risk"],
     },
   },
