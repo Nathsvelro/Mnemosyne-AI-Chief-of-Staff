@@ -1,86 +1,283 @@
-# Welcome to your Lovable project
+# 🧠 Mnemosyne — Organizational Intelligence OS
 
-## Project info
+[Insert logo here]
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Mnemosyne** is an **AI-powered Organizational Intelligence Operating System** designed to become the *memory, filter, and coordination layer* of a company.
 
-## How can I edit this code?
+It is not a chatbot.  
+It is not a productivity tool.  
 
-There are several ways of editing your application.
+Mnemosyne acts as a **Superhuman AI Chief of Staff**, helping organizations think, decide, and align with clarity.
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## 🌍 The Problem
 
-Changes made via Lovable will be committed automatically to this repo.
+Modern organizations generate massive amounts of information across:
 
-**Use your preferred IDE**
+- Meetings  
+- Chats  
+- Emails  
+- Documents  
+- Voice notes  
+- Dashboards  
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Yet they lack:
+- A single source of truth  
+- Visibility into how knowledge flows  
+- Awareness of who knows what (and who doesn’t)  
+- Protection against overload and contradictions  
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+As a result:
+- Decisions become fragmented  
+- Knowledge is duplicated or lost  
+- People are overwhelmed or excluded  
+- Alignment slows execution  
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🎯 The Vision
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Mnemosyne creates **organizational intelligence** by:
 
-# Step 3: Install the necessary dependencies.
-npm i
+- Mapping how information flows across teams  
+- Maintaining a living, versioned source of truth  
+- Routing information only to the people who need it  
+- Detecting conflicts, risks, and second-order effects  
+- Preserving organizational memory over time  
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+The goal is **better communication, not more communication**.
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🧩 Core Concepts
 
-**Use GitHub Codespaces**
+### 1. Organizational Knowledge Graph
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+[Insert photo here]
 
-## What technologies are used for this project?
+A continuously updated graph that connects:
+- People  
+- Teams  
+- Topics  
+- Decisions  
+- Ideas  
+- Dependencies  
 
-This project is built with:
+This graph reveals:
+- Ownership and accountability  
+- Information bottlenecks  
+- Knowledge duplication  
+- Areas of misalignment  
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## Navigation guide
+### 2. Living Source of Truth
 
-Use this quick map to move through the application’s main pages and understand what each view is for.
+[Insert photo here]
 
-| Route | Page | Purpose |
-| --- | --- | --- |
-| `/` or `/home` | Org Pulse | Executive overview with today’s brief, key alerts, and the action queue. |
-| `/graph` | Knowledge Graph | Interactive knowledge map with filters for time range, node type, conflicts, and bottlenecks. |
-| `/decisions` | Decision Log | Searchable, sortable decision registry with status, owners, and affected teams. |
-| `/updates` | Updates | Strategic update feed highlighting impact, subscribers, and recommended actions. |
-| `/inbox` | Inbox | Routed items that need attention, with quick actions to view, snooze, delegate, or mark FYI. |
-| `/admin` | Admin & Setup | Organization settings, connectors, policies, retention, and CEO view configuration. |
-| `*` | Not Found | Catch-all route for unknown paths. |
+All decisions and ideas are:
+- Structured  
+- Versioned  
+- Traceable  
+- Contextualized  
 
-## How can I deploy this project?
+Every change answers:
+- What changed?  
+- Why did it change?  
+- Who is affected?  
+- What was the previous truth?  
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+---
 
-## Can I connect a custom domain to my Lovable project?
+### 3. Agentic AI Architecture
 
-Yes, you can!
+[Insert photo here]
+
+Mnemosyne operates through cooperating AI agents:
+
+- **Memory Agent** → preserves organizational history  
+- **Coordinator Agent** → routes information intelligently  
+- **Critic Agent** → detects conflicts and contradictions  
+- **Summarizer Agent** → transforms raw input into structured knowledge  
+
+This enables the system to reason, not just respond.
+
+---
+
+## 🖥️ Platform Screens
+
+### 🟠 Org Pulse
+
+[Insert photo here]
+
+**Purpose:** Executive-level awareness at a glance.
+
+Shows:
+- What changed recently  
+- Active risks or conflicts  
+- Items requiring validation  
+- Organizational load signals  
+
+Designed for leadership clarity, not micromanagement.
+
+---
+
+### 🔗 Knowledge Graph
+
+[Insert photo here]
+
+**Purpose:** Visualize how understanding spreads.
+
+Features:
+- Interactive graph of people, teams, decisions, and topics  
+- Flow maps showing communication intensity  
+- Bottleneck and conflict views  
+- Contextual node inspection with AI explanations  
+
+---
+
+### 📜 Decision Log
+
+[Insert photo here]
+
+**Purpose:** Single source of truth for decisions.
+
+Includes:
+- Canonical decision statements  
+- Version history  
+- Change rationale  
+- Stakeholder impact  
+- Routing history  
+
+Decisions are treated like **version-controlled knowledge**, not messages.
+
+---
+
+### 🔄 Updates
+
+[Insert photo here]
+
+**Purpose:** Track meaningful changes, not noise.
+
+Only shows:
+- Strategic updates  
+- High-impact changes  
+- AI-generated “why this matters”  
+- Who should know (and why)  
+
+This replaces traditional activity feeds.
+
+---
+
+### 📥 Inbox
+
+[Insert photo here]
+
+**Purpose:** Prove targeted communication.
+
+Each item includes:
+- Why it was routed to you  
+- Suggested action (Act / FYI / Watch)  
+- Ability to delegate or snooze  
+
+No broadcast spam. No blind CCs.
+
+---
+
+### 💡 Innovation Sprints
+
+[Insert photo here]
+
+**Purpose:** System-aware idea development.
+
+Each sprint includes:
+- Status (Draft / Active / In Review / Completed)  
+- Progress tracking  
+- Votes and participation  
+- Connected nodes in the knowledge graph  
+- Second-order effects, such as:
+  - Operational risks  
+  - Compliance implications  
+  - Resource conflicts  
+  - Market timing impacts  
+
+Ideas are evaluated as **systems**, not isolated proposals.
+
+---
+
+## 🤖 AI Interaction Model
+
+[Insert photo here]
+
+Users interact via **Ask Mnemosyne**:
+- Text or voice input  
+- Context-aware answers  
+- Transparent reasoning  
+- Actionable suggestions  
+
+Mnemosyne can:
+- Create or revise decisions  
+- Log updates  
+- Flag conflicts  
+- Recommend stakeholders  
+- Surface second-order effects  
+
+---
+
+## 🏗️ Technical Architecture (High Level)
+
+[Insert photo here]
+
+- **Frontend:** Component-based UI (Lovable-ready)  
+- **Backend:** API-driven (Node / FastAPI compatible)  
+- **AI Layer:** OpenAI Responses API with tool calling  
+- **Database:**
+  - Postgres + pgvector (semantic retrieval)  
+  - Optional Neo4j for advanced graph queries  
+
+---
+
+## 🧠 Design Principles
+
+- Intelligence over features  
+- Visualization over text walls  
+- Transparency over black-box AI  
+- Alignment over velocity  
+- Systems thinking over local optimization  
+
+---
+
+## 👤 Company Context
+
+- **Company:** Nathaniel Velazquez Company  
+- **CEO:** Nathaniel Velazquez  
+- **Mode:** Executive-aware by default (CEO Digest enabled)  
+
+---
+
+## 🚀 Why Mnemosyne Matters
+
+When organizations gain visibility into:
+- How knowledge moves  
+- Where decisions change  
+- Why misalignment occurs  
+
+They unlock:
+- Faster execution  
+- Higher trust  
+- Better decisions  
+- Collective intelligence  
+
+Mnemosyne is not a tool.  
+It is a **company brain**.
+
+---
+
+## 🧭 One-Line Summary
+
+> **Mnemosyne is an AI Chief of Staff that turns organizational communication into intelligence, alignment, and action.**
+
 
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
