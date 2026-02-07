@@ -21,6 +21,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<OrgPulse />} />
+          <Route path="/home" element={<OrgPulse />} />
           <Route path="/graph" element={<GraphPage />} />
           <Route path="/decisions" element={<DecisionLog />} />
           <Route path="/updates" element={<UpdatesPage />} />
