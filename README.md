@@ -104,7 +104,7 @@ This enables the system to reason, not just respond.
 
 ### 🟠 Org Pulse
 
-[Insert photo here]
+![Local image](./images/Org_pulse.png)
 
 **Purpose:** Executive-level awareness at a glance.
 
@@ -120,7 +120,7 @@ Designed for leadership clarity, not micromanagement.
 
 ### 🔗 Knowledge Graph
 
-[Insert photo here]
+![Local image](./images/Graph.png)
 
 **Purpose:** Visualize how understanding spreads.
 
@@ -134,7 +134,7 @@ Features:
 
 ### 📜 Decision Log
 
-[Insert photo here]
+![Local image](./images/Decision_log.png)
 
 **Purpose:** Single source of truth for decisions.
 
@@ -151,7 +151,7 @@ Decisions are treated like **version-controlled knowledge**, not messages.
 
 ### 🔄 Updates
 
-[Insert photo here]
+![Local image](./images/Updates.png)
 
 **Purpose:** Track meaningful changes, not noise.
 
@@ -167,7 +167,7 @@ This replaces traditional activity feeds.
 
 ### 📥 Inbox
 
-[Insert photo here]
+![Local image](./images/Inbox.png)
 
 **Purpose:** Prove targeted communication.
 
@@ -182,7 +182,7 @@ No broadcast spam. No blind CCs.
 
 ### 💡 Innovation Sprints
 
-[Insert photo here]
+![Local image](./images/Innovation_Sprint.png)
 
 **Purpose:** System-aware idea development.
 
@@ -203,7 +203,7 @@ Ideas are evaluated as **systems**, not isolated proposals.
 
 ## 🤖 AI Interaction Model
 
-[Insert photo here]
+![Local image](./images/Mnmosyne_AI.)
 
 Users interact via **Ask Mnemosyne**:
 - Text or voice input  
@@ -222,7 +222,6 @@ Mnemosyne can:
 
 ## 🏗️ Technical Architecture (High Level)
 
-[Insert photo here]
 
 - **Frontend:** Component-based UI (Lovable-ready)  
 - **Backend:** API-driven (Node / FastAPI compatible)  
