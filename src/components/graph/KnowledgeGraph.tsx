@@ -40,13 +40,13 @@ interface KnowledgeGraphProps {
   viewMode?: "flow" | "bottlenecks" | "diff";
 }
 
-// Color scheme matching Kumu.io style
-const nodeColors: Record<EntityType, { bg: string; border: string; label: string }> = {
-  person: { bg: "#3b82f6", border: "#60a5fa", label: "People" },       // Blue
-  team: { bg: "#22c55e", border: "#4ade80", label: "Organizations" },  // Green
-  decision: { bg: "#f59e0b", border: "#fbbf24", label: "Decisions" },  // Amber
-  topic: { bg: "#8b5cf6", border: "#a78bfa", label: "Topics" },        // Purple
-  document: { bg: "#06b6d4", border: "#22d3ee", label: "Documents" },  // Cyan
+// Color scheme matching Knowledge Graph style - teal/green theme
+const nodeColors: Record<EntityType, { bg: string; border: string; label: string; icon: 'person' | 'institution' | 'document' | 'topic' | 'decision' }> = {
+  person: { bg: "#14b8a6", border: "#2dd4bf", label: "People", icon: "person" },           // Teal
+  team: { bg: "#14b8a6", border: "#2dd4bf", label: "Organizations", icon: "institution" }, // Teal (institution icon)
+  decision: { bg: "#14b8a6", border: "#2dd4bf", label: "Decisions", icon: "decision" },    // Teal
+  topic: { bg: "#6b7280", border: "#9ca3af", label: "Topics", icon: "topic" },             // Gray (satellite nodes)
+  document: { bg: "#14b8a6", border: "#2dd4bf", label: "Documents", icon: "document" },   // Teal
 };
 
 // Extended default nodes with realistic data
@@ -482,12 +482,12 @@ export function KnowledgeGraph({
       {/* Search Bar */}
       <div className="absolute top-4 left-4 z-20 w-64">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search..."
-            className="pl-10 bg-[#252540] border-[#3a3a5c] text-white placeholder:text-gray-500"
+            className="pl-10 bg-card border-border text-foreground placeholder:text-muted-foreground"
           />
         </div>
       </div>
@@ -497,48 +497,55 @@ export function KnowledgeGraph({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 bg-[#252540] border-[#3a3a5c] hover:bg-[#3a3a5c]"
+          className="h-8 w-8 bg-card border-border hover:bg-secondary"
           onClick={() => setZoom(z => Math.min(z * 1.2, 3))}
         >
-          <ZoomIn className="w-4 h-4 text-gray-300" />
+          <ZoomIn className="w-4 h-4 text-foreground" />
         </Button>
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 bg-[#252540] border-[#3a3a5c] hover:bg-[#3a3a5c]"
+          className="h-8 w-8 bg-card border-border hover:bg-secondary"
           onClick={() => setZoom(z => Math.max(z * 0.8, 0.3))}
         >
-          <ZoomOut className="w-4 h-4 text-gray-300" />
+          <ZoomOut className="w-4 h-4 text-foreground" />
         </Button>
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 bg-[#252540] border-[#3a3a5c] hover:bg-[#3a3a5c]"
+          className="h-8 w-8 bg-card border-border hover:bg-secondary"
           onClick={resetView}
         >
-          <Maximize2 className="w-4 h-4 text-gray-300" />
+          <Maximize2 className="w-4 h-4 text-foreground" />
         </Button>
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 z-20 bg-[#252540]/90 backdrop-blur-sm rounded-lg p-3 border border-[#3a3a5c]">
-        <div className="text-xs text-gray-400 mb-2 font-medium">Interlocks</div>
+      <div className="absolute bottom-4 left-4 z-20 bg-card/90 backdrop-blur-sm rounded-lg p-3 border border-border">
+        <div className="text-xs text-muted-foreground mb-2 font-medium">Entity Types</div>
         <div className="space-y-1.5">
-          {Object.entries(nodeColors).map(([type, colors]) => (
-            <div key={type} className="flex items-center gap-2">
-              <div 
-                className="w-3 h-3 rounded-full" 
-                style={{ backgroundColor: colors.bg }}
-              />
-              <span className="text-xs text-gray-300">{colors.label}</span>
-            </div>
-          ))}
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#14b8a6" }} />
+            <span className="text-xs text-foreground">People</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#14b8a6" }} />
+            <span className="text-xs text-foreground">Organizations</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#14b8a6" }} />
+            <span className="text-xs text-foreground">Decisions</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#6b7280" }} />
+            <span className="text-xs text-foreground">Topics</span>
+          </div>
         </div>
       </div>
 
       {/* Stats Badge */}
-      <div className="absolute bottom-4 right-4 z-20 bg-[#252540]/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-[#3a3a5c]">
-        <span className="text-xs text-gray-400">
+      <div className="absolute bottom-4 right-4 z-20 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
+        <span className="text-xs text-muted-foreground">
           {layoutNodes.length} nodes • {edges.length} connections
         </span>
       </div>
@@ -582,9 +589,9 @@ export function KnowledgeGraph({
                 key={key}
                 d={getCurvedPath(from.x, from.y, to.x, to.y)}
                 fill="none"
-                stroke={isHighlighted ? "#60a5fa" : "#3a3a5c"}
-                strokeWidth={isHighlighted ? 2 : 1}
-                strokeOpacity={isHighlighted ? 0.8 : 0.4}
+                stroke={isHighlighted ? "#14b8a6" : "#4b5563"}
+                strokeWidth={isHighlighted ? 2.5 : 1.5}
+                strokeOpacity={isHighlighted ? 0.9 : 0.5}
                 className="transition-all duration-200"
               />
             );
@@ -602,6 +609,14 @@ export function KnowledgeGraph({
             const isHovered = hoveredNode === node.id;
             const isCenter = centerNodeId === node.id;
             const isPerson = node.type === 'person';
+            const isTeam = node.type === 'team';
+            const isTopic = node.type === 'topic';
+            const isDocument = node.type === 'document';
+            const isDecision = node.type === 'decision';
+            
+            // Satellite/topic nodes are smaller gray circles
+            const isSatellite = isTopic && !isCenter && !isSelected;
+            const satelliteSize = 24;
             
             return (
               <g
@@ -616,53 +631,294 @@ export function KnowledgeGraph({
                 {/* Outer ring for selected/hovered */}
                 {(isSelected || isHovered || isCenter) && (
                   <circle
-                    r={size / 2 + 4}
+                    r={(isSatellite ? satelliteSize : size) / 2 + 4}
                     fill="none"
-                    stroke={isCenter ? "#22c55e" : colors.border}
+                    stroke={isCenter ? "#14b8a6" : colors.border}
                     strokeWidth={2}
                     strokeOpacity={0.6}
                     className="animate-pulse"
                   />
                 )}
                 
-                {/* Main circle */}
-                <circle
-                  r={size / 2}
-                  fill={colors.bg}
-                  stroke={colors.border}
-                  strokeWidth={2}
-                  className="transition-all duration-200"
-                />
-                
-                {/* Inner content */}
-                {isPerson ? (
-                  // Person avatar with initials
-                  <text
-                    textAnchor="middle"
-                    dy="0.35em"
-                    fill="white"
-                    fontSize={size * 0.35}
-                    fontWeight="600"
-                    className="pointer-events-none select-none"
-                  >
-                    {getInitials(node.label)}
-                  </text>
+                {/* Satellite nodes (topics) - small gray circles with text */}
+                {isSatellite ? (
+                  <>
+                    <circle
+                      r={satelliteSize / 2}
+                      fill="#374151"
+                      stroke="#4b5563"
+                      strokeWidth={1}
+                    />
+                    <text
+                      textAnchor="middle"
+                      dy="0.35em"
+                      fill="#e5e7eb"
+                      fontSize="8"
+                      fontWeight="500"
+                      className="pointer-events-none select-none"
+                    >
+                      {node.label.substring(0, 6)}
+                    </text>
+                  </>
                 ) : (
-                  // Icon or short label for other types
-                  <text
-                    textAnchor="middle"
-                    dy="0.35em"
-                    fill="white"
-                    fontSize={size * 0.28}
-                    fontWeight="600"
-                    className="pointer-events-none select-none"
-                  >
-                    {node.label.substring(0, 3).toUpperCase()}
-                  </text>
+                  <>
+                    {/* Main node - styled based on type */}
+                    {/* Person node - silhouette with badge */}
+                    {isPerson && (
+                      <>
+                        {/* Circle background */}
+                        <circle
+                          r={size / 2}
+                          fill="#0f766e"
+                          stroke="#14b8a6"
+                          strokeWidth={3}
+                        />
+                        {/* Person silhouette icon */}
+                        <g transform={`translate(0, -${size * 0.08})`}>
+                          {/* Head */}
+                          <circle
+                            cx={0}
+                            cy={-size * 0.12}
+                            r={size * 0.15}
+                            fill="#14b8a6"
+                          />
+                          {/* Body/shoulders */}
+                          <path
+                            d={`M ${-size * 0.25} ${size * 0.22} 
+                                Q ${-size * 0.25} ${size * 0.02}, 0 ${size * 0.02}
+                                Q ${size * 0.25} ${size * 0.02}, ${size * 0.25} ${size * 0.22}`}
+                            fill="#14b8a6"
+                          />
+                        </g>
+                        {/* Badge label below */}
+                        <g transform={`translate(0, ${size / 2 + 12})`}>
+                          <rect
+                            x={-Math.max(node.label.length * 3.5, 40)}
+                            y={-8}
+                            width={Math.max(node.label.length * 7, 80)}
+                            height={16}
+                            rx={3}
+                            fill="#0f766e"
+                            stroke="#14b8a6"
+                            strokeWidth={1}
+                          />
+                          <text
+                            textAnchor="middle"
+                            dy="0.35em"
+                            fill="white"
+                            fontSize="9"
+                            fontWeight="600"
+                            className="pointer-events-none select-none"
+                          >
+                            {node.label.length > 16 ? node.label.substring(0, 14) + '...' : node.label.toUpperCase()}
+                          </text>
+                        </g>
+                      </>
+                    )}
+                    
+                    {/* Team/Organization node - institution building */}
+                    {isTeam && (
+                      <>
+                        {/* Circle background */}
+                        <circle
+                          r={size / 2}
+                          fill="#0f766e"
+                          stroke="#14b8a6"
+                          strokeWidth={3}
+                        />
+                        {/* Institution building icon */}
+                        <g transform={`translate(0, 0)`}>
+                          {/* Roof/pediment */}
+                          <path
+                            d={`M 0 ${-size * 0.28} 
+                                L ${size * 0.28} ${-size * 0.1}
+                                L ${-size * 0.28} ${-size * 0.1} Z`}
+                            fill="#14b8a6"
+                          />
+                          {/* Columns */}
+                          <rect x={-size * 0.22} y={-size * 0.1} width={size * 0.1} height={size * 0.32} fill="#14b8a6" />
+                          <rect x={-size * 0.05} y={-size * 0.1} width={size * 0.1} height={size * 0.32} fill="#14b8a6" />
+                          <rect x={size * 0.12} y={-size * 0.1} width={size * 0.1} height={size * 0.32} fill="#14b8a6" />
+                          {/* Base */}
+                          <rect x={-size * 0.3} y={size * 0.18} width={size * 0.6} height={size * 0.08} fill="#14b8a6" />
+                        </g>
+                        {/* Badge label below */}
+                        <g transform={`translate(0, ${size / 2 + 12})`}>
+                          <rect
+                            x={-Math.max(node.label.length * 3.5, 35)}
+                            y={-8}
+                            width={Math.max(node.label.length * 7, 70)}
+                            height={16}
+                            rx={3}
+                            fill="#0f766e"
+                            stroke="#14b8a6"
+                            strokeWidth={1}
+                          />
+                          <text
+                            textAnchor="middle"
+                            dy="0.35em"
+                            fill="white"
+                            fontSize="9"
+                            fontWeight="600"
+                            className="pointer-events-none select-none"
+                          >
+                            {node.label.toUpperCase()}
+                          </text>
+                        </g>
+                      </>
+                    )}
+                    
+                    {/* Decision node - document with checkmark */}
+                    {isDecision && (
+                      <>
+                        <circle
+                          r={size / 2}
+                          fill="#0f766e"
+                          stroke="#14b8a6"
+                          strokeWidth={3}
+                        />
+                        {/* Document icon */}
+                        <rect
+                          x={-size * 0.18}
+                          y={-size * 0.22}
+                          width={size * 0.36}
+                          height={size * 0.44}
+                          rx={2}
+                          fill="#14b8a6"
+                        />
+                        {/* Checkmark */}
+                        <path
+                          d={`M ${-size * 0.08} ${size * 0.02} 
+                              L ${-size * 0.02} ${size * 0.1} 
+                              L ${size * 0.1} ${-size * 0.06}`}
+                          fill="none"
+                          stroke="#0f766e"
+                          strokeWidth={2.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        {/* Badge */}
+                        <g transform={`translate(0, ${size / 2 + 12})`}>
+                          <rect
+                            x={-Math.max(node.label.length * 3, 30)}
+                            y={-8}
+                            width={Math.max(node.label.length * 6, 60)}
+                            height={16}
+                            rx={3}
+                            fill="#0f766e"
+                            stroke="#14b8a6"
+                            strokeWidth={1}
+                          />
+                          <text
+                            textAnchor="middle"
+                            dy="0.35em"
+                            fill="white"
+                            fontSize="8"
+                            fontWeight="600"
+                            className="pointer-events-none select-none"
+                          >
+                            {node.label.length > 14 ? node.label.substring(0, 12) + '...' : node.label}
+                          </text>
+                        </g>
+                      </>
+                    )}
+                    
+                    {/* Document node */}
+                    {isDocument && (
+                      <>
+                        <circle
+                          r={size / 2}
+                          fill="#0f766e"
+                          stroke="#14b8a6"
+                          strokeWidth={3}
+                        />
+                        {/* Document icon with lines */}
+                        <rect
+                          x={-size * 0.18}
+                          y={-size * 0.22}
+                          width={size * 0.36}
+                          height={size * 0.44}
+                          rx={2}
+                          fill="#14b8a6"
+                        />
+                        <line x1={-size * 0.1} y1={-size * 0.1} x2={size * 0.1} y2={-size * 0.1} stroke="#0f766e" strokeWidth={2} />
+                        <line x1={-size * 0.1} y1={size * 0.02} x2={size * 0.1} y2={size * 0.02} stroke="#0f766e" strokeWidth={2} />
+                        <line x1={-size * 0.1} y1={size * 0.14} x2={size * 0.06} y2={size * 0.14} stroke="#0f766e" strokeWidth={2} />
+                        {/* Badge */}
+                        <g transform={`translate(0, ${size / 2 + 12})`}>
+                          <rect
+                            x={-Math.max(node.label.length * 3, 30)}
+                            y={-8}
+                            width={Math.max(node.label.length * 6, 60)}
+                            height={16}
+                            rx={3}
+                            fill="#0f766e"
+                            stroke="#14b8a6"
+                            strokeWidth={1}
+                          />
+                          <text
+                            textAnchor="middle"
+                            dy="0.35em"
+                            fill="white"
+                            fontSize="8"
+                            fontWeight="600"
+                            className="pointer-events-none select-none"
+                          >
+                            {node.label.length > 14 ? node.label.substring(0, 12) + '...' : node.label}
+                          </text>
+                        </g>
+                      </>
+                    )}
+                    
+                    {/* Topic node (when not satellite) */}
+                    {isTopic && !isSatellite && (
+                      <>
+                        <circle
+                          r={size / 2}
+                          fill="#374151"
+                          stroke="#6b7280"
+                          strokeWidth={3}
+                        />
+                        <text
+                          textAnchor="middle"
+                          dy="0.35em"
+                          fill="white"
+                          fontSize={size * 0.28}
+                          fontWeight="600"
+                          className="pointer-events-none select-none"
+                        >
+                          {node.label.substring(0, 3).toUpperCase()}
+                        </text>
+                        {/* Badge */}
+                        <g transform={`translate(0, ${size / 2 + 12})`}>
+                          <rect
+                            x={-Math.max(node.label.length * 3, 30)}
+                            y={-8}
+                            width={Math.max(node.label.length * 6, 60)}
+                            height={16}
+                            rx={3}
+                            fill="#374151"
+                            stroke="#6b7280"
+                            strokeWidth={1}
+                          />
+                          <text
+                            textAnchor="middle"
+                            dy="0.35em"
+                            fill="white"
+                            fontSize="8"
+                            fontWeight="600"
+                            className="pointer-events-none select-none"
+                          >
+                            {node.label}
+                          </text>
+                        </g>
+                      </>
+                    )}
+                  </>
                 )}
                 
                 {/* Load score indicator for high-load people */}
-                {node.metadata?.loadScore && node.metadata.loadScore > 80 && (
+                {node.metadata?.loadScore && node.metadata.loadScore > 80 && !isSatellite && (
                   <circle
                     cx={size / 2 - 4}
                     cy={-size / 2 + 4}
@@ -674,7 +930,7 @@ export function KnowledgeGraph({
                 )}
                 
                 {/* Conflict indicator */}
-                {node.metadata?.hasConflict && (
+                {node.metadata?.hasConflict && !isSatellite && (
                   <circle
                     cx={-size / 2 + 4}
                     cy={-size / 2 + 4}
@@ -683,31 +939,6 @@ export function KnowledgeGraph({
                     stroke="#1a1a2e"
                     strokeWidth={2}
                   />
-                )}
-                
-                {/* Label */}
-                <text
-                  y={size / 2 + 14}
-                  textAnchor="middle"
-                  fill="#e2e8f0"
-                  fontSize="11"
-                  fontWeight="500"
-                  className="pointer-events-none select-none"
-                >
-                  {node.label.length > 18 ? node.label.substring(0, 16) + '...' : node.label}
-                </text>
-                
-                {/* Role subtitle for people */}
-                {isPerson && node.metadata?.role && (
-                  <text
-                    y={size / 2 + 26}
-                    textAnchor="middle"
-                    fill="#94a3b8"
-                    fontSize="9"
-                    className="pointer-events-none select-none"
-                  >
-                    {node.metadata.role}
-                  </text>
                 )}
               </g>
             );
