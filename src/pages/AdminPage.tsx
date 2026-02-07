@@ -38,11 +38,11 @@ const dataSourcesConfig = [
   { id: "calendar", name: "Calendar", icon: Calendar, connected: true, status: "connected" },
 ];
 
-const rolesConfig = [
-  { id: "admin", name: "Admin", description: "Full access to all features", count: 2 },
-  { id: "manager", name: "Manager", description: "Can manage teams and decisions", count: 5 },
-  { id: "member", name: "Member", description: "Can view and participate", count: 15 },
-  { id: "viewer", name: "Viewer", description: "Read-only access", count: 3 },
+const connectorLabels = [
+  { name: "Email (Slack/Teams)", status: "mock_or_real" },
+  { name: "Chat", status: "mock_or_real" },
+  { name: "Docs (Drive/Notion)", status: "mock_or_real" },
+  { name: "Calendar", status: "mock_or_real" },
 ];
 
 const AdminPage = () => {
@@ -87,7 +87,40 @@ const AdminPage = () => {
             <TabsTrigger value="ceo">CEO View</TabsTrigger>
           </TabsList>
 
-          {/* Data Sources */}
+          {/* Company Tab */}
+          <TabsContent value="company" className="space-y-6">
+            <div className="p-6 rounded-xl bg-card border border-border space-y-6">
+              <h3 className="font-semibold text-foreground text-lg">Company Information</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm text-muted-foreground">Company Name</Label>
+                  <Input 
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    className="mt-2"
+                    placeholder="Enter company name"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm text-muted-foreground">CEO</Label>
+                  <Input 
+                    value={ceoName}
+                    onChange={(e) => setCeoName(e.target.value)}
+                    className="mt-2"
+                    placeholder="Enter CEO name"
+                  />
+                </div>
+              </div>
+
+              <Button onClick={handleSave}>
+                Save Company Settings
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* Connectors Tab */}
           <TabsContent value="connectors" className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               {dataSourcesConfig.map((source) => {
@@ -157,82 +190,17 @@ const AdminPage = () => {
                 </Button>
               </div>
             </div>
-          </TabsContent>
 
-          {/* Permissions */}
-          <TabsContent value="roles" className="space-y-6">
-            <div className="space-y-4">
-              {rolesConfig.map((role) => (
-                <div 
-                  key={role.id}
-                  className="p-4 rounded-xl bg-card border border-border flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center",
-                      role.id === "admin" ? "bg-conflict/10" : "bg-secondary"
-                    )}>
-                      {role.id === "admin" ? (
-                        <Crown className="w-5 h-5 text-conflict" />
-                      ) : (
-                        <Users className="w-5 h-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-foreground">{role.name}</h3>
-                      <p className="text-xs text-muted-foreground">{role.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline">{role.count} users</Badge>
-                    <Button variant="ghost" size="sm">
-                      <Settings2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Button variant="outline">
-              <Users className="w-4 h-4 mr-2" />
-              Manage Users
+            <Button variant="outline" onClick={() => toast({ title: "Running test import...", description: "Importing sample data from connectors." })}>
+              Run Test Import
             </Button>
           </TabsContent>
 
-          {/* Routing Rules */}
-          <TabsContent value="routing" className="space-y-6">
+          {/* Policies Tab */}
+          <TabsContent value="policies" className="space-y-6">
             <div className="p-4 rounded-xl bg-card border border-border space-y-4">
-              <h3 className="font-medium text-foreground">Default Routing Rules</h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
-                  <div>
-                    <p className="text-sm text-foreground">Route decisions to team leads</p>
-                    <p className="text-xs text-muted-foreground">Auto-notify when decisions affect their team</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
-                  <div>
-                    <p className="text-sm text-foreground">Route conflicts to owners</p>
-                    <p className="text-xs text-muted-foreground">Notify when conflicts are detected</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
-                  <div>
-                    <p className="text-sm text-foreground">Overload warnings</p>
-                    <p className="text-xs text-muted-foreground">Alert when stakeholders exceed 80% capacity</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-card border border-border space-y-4">
-              <h3 className="font-medium text-foreground">Sensitivity Labels</h3>
+              <h3 className="font-medium text-foreground">Routing Sensitivity Labels</h3>
+              <p className="text-xs text-muted-foreground">Control how information is classified and distributed</p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-lg bg-secondary/30 text-center">
                   <Badge variant="outline" className="bg-success/10 text-success mb-2">Public</Badge>
@@ -248,6 +216,73 @@ const AdminPage = () => {
                 </div>
               </div>
             </div>
+
+            <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+              <h3 className="font-medium text-foreground">Who Can Confirm Decisions</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                  <div className="flex items-center gap-3">
+                    <Crown className="w-4 h-4 text-warning" />
+                    <div>
+                      <p className="text-sm text-foreground">Executive Team</p>
+                      <p className="text-xs text-muted-foreground">Can confirm all decisions</p>
+                    </div>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                  <div className="flex items-center gap-3">
+                    <Users className="w-4 h-4 text-primary" />
+                    <div>
+                      <p className="text-sm text-foreground">Team Leads</p>
+                      <p className="text-xs text-muted-foreground">Can confirm team-level decisions</p>
+                    </div>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-foreground">Decision Owners</p>
+                      <p className="text-xs text-muted-foreground">Can confirm their own decisions</p>
+                    </div>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+              <h3 className="font-medium text-foreground">Conflict Resolution Workflow</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                  <div>
+                    <p className="text-sm text-foreground">Auto-escalate unresolved conflicts</p>
+                    <p className="text-xs text-muted-foreground">After 48 hours with no action</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                  <div>
+                    <p className="text-sm text-foreground">Require resolution rationale</p>
+                    <p className="text-xs text-muted-foreground">Document why a conflict was resolved</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                  <div>
+                    <p className="text-sm text-foreground">Notify stakeholders on resolution</p>
+                    <p className="text-xs text-muted-foreground">Send updates when conflicts are closed</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+              </div>
+            </div>
+
+            <Button onClick={handleSave}>
+              Save Policies
+            </Button>
           </TabsContent>
 
           {/* Data Policy */}
@@ -330,13 +365,28 @@ const AdminPage = () => {
 
             {ceoViewEnabled && (
               <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-card border border-border">
-                  <Label className="text-sm text-muted-foreground">CEO Name</Label>
-                  <Input 
-                    value={ceoName}
-                    onChange={(e) => setCeoName(e.target.value)}
-                    className="mt-2"
-                  />
+                <div className="p-4 rounded-xl bg-card border border-border space-y-4">
+                  <div>
+                    <Label className="text-sm text-muted-foreground">CEO Name</Label>
+                    <Input 
+                      value={ceoName}
+                      onChange={(e) => setCeoName(e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Digest Frequency</Label>
+                    <Select value={ceoDigestFrequency} onValueChange={setCeoDigestFrequency}>
+                      <SelectTrigger className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-card border border-border space-y-4">
@@ -344,7 +394,7 @@ const AdminPage = () => {
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <Check className="w-4 h-4 text-success" />
-                      <span className="text-sm text-foreground">Daily executive brief</span>
+                      <span className="text-sm text-foreground">{ceoDigestFrequency === "daily" ? "Daily" : "Weekly"} executive brief</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Check className="w-4 h-4 text-success" />
