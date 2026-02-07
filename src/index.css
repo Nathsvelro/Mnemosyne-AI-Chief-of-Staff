@@ -9,50 +9,50 @@
 
 @layer base {
   :root {
-    /* Core backgrounds - Deep charcoal palette */
-    --background: 220 20% 7%;
-    --background-elevated: 220 18% 10%;
-    --background-surface: 220 16% 13%;
-    --foreground: 210 20% 95%;
+    /* Core backgrounds - Deep charcoal with warmth */
+    --background: 20 15% 5%;
+    --background-elevated: 20 12% 8%;
+    --background-surface: 20 10% 11%;
+    --foreground: 30 15% 92%;
 
     /* Cards & Containers */
-    --card: 220 18% 11%;
-    --card-foreground: 210 20% 95%;
-    --card-hover: 220 16% 14%;
+    --card: 20 12% 9%;
+    --card-foreground: 30 15% 92%;
+    --card-hover: 20 10% 12%;
 
     /* Popover & Dialogs */
-    --popover: 220 18% 10%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 20 12% 8%;
+    --popover-foreground: 30 15% 92%;
 
-    /* Primary - Teal/Cyan accent for intelligence */
-    --primary: 185 70% 50%;
-    --primary-foreground: 220 20% 7%;
-    --primary-glow: 185 80% 60%;
-    --primary-muted: 185 50% 25%;
+    /* Primary - Warm copper/bronze accent */
+    --primary: 25 85% 55%;
+    --primary-foreground: 20 15% 5%;
+    --primary-glow: 30 90% 60%;
+    --primary-muted: 25 50% 25%;
 
     /* Secondary */
-    --secondary: 220 15% 18%;
-    --secondary-foreground: 210 15% 75%;
+    --secondary: 20 10% 15%;
+    --secondary-foreground: 30 10% 70%;
 
     /* Muted elements */
-    --muted: 220 15% 15%;
-    --muted-foreground: 215 15% 55%;
+    --muted: 20 10% 12%;
+    --muted-foreground: 25 10% 50%;
 
-    /* Accent - Subtle highlight */
-    --accent: 220 20% 16%;
-    --accent-foreground: 210 20% 90%;
+    /* Accent - Warm highlight */
+    --accent: 25 15% 14%;
+    --accent-foreground: 30 15% 88%;
 
     /* Semantic colors */
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
     
-    --success: 160 60% 45%;
-    --success-foreground: 160 100% 95%;
+    --success: 145 60% 42%;
+    --success-foreground: 145 100% 95%;
     
     --warning: 38 90% 55%;
     --warning-foreground: 38 100% 10%;
     
-    --info: 200 80% 55%;
+    --info: 200 70% 50%;
     --info-foreground: 200 100% 95%;
 
     /* Conflict/Alert - Warm amber */
@@ -60,48 +60,48 @@
     --conflict-foreground: 30 100% 10%;
 
     /* Borders & Inputs */
-    --border: 220 15% 18%;
-    --border-subtle: 220 15% 14%;
-    --input: 220 15% 15%;
-    --ring: 185 70% 50%;
+    --border: 20 10% 15%;
+    --border-subtle: 20 10% 12%;
+    --input: 20 10% 12%;
+    --ring: 25 85% 55%;
 
     /* Radius */
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     /* Graph visualization colors */
-    --node-person: 185 70% 50%;
-    --node-team: 280 60% 60%;
-    --node-decision: 160 60% 50%;
+    --node-person: 25 85% 55%;
+    --node-team: 280 50% 55%;
+    --node-decision: 145 55% 45%;
     --node-topic: 38 80% 55%;
-    --node-dependency: 340 65% 55%;
-    --edge-default: 220 15% 30%;
-    --edge-active: 185 70% 50%;
+    --node-dependency: 340 60% 50%;
+    --edge-default: 20 10% 25%;
+    --edge-active: 25 85% 55%;
 
     /* Glass effects */
-    --glass-bg: 220 20% 10% / 0.8;
-    --glass-border: 220 15% 25% / 0.5;
+    --glass-bg: 20 15% 8% / 0.9;
+    --glass-border: 20 10% 20% / 0.5;
 
     /* Sidebar */
-    --sidebar-background: 220 20% 6%;
-    --sidebar-foreground: 210 15% 70%;
-    --sidebar-primary: 185 70% 50%;
-    --sidebar-primary-foreground: 220 20% 7%;
-    --sidebar-accent: 220 18% 12%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 220 15% 12%;
-    --sidebar-ring: 185 70% 50%;
+    --sidebar-background: 20 15% 4%;
+    --sidebar-foreground: 30 10% 65%;
+    --sidebar-primary: 25 85% 55%;
+    --sidebar-primary-foreground: 20 15% 5%;
+    --sidebar-accent: 25 15% 12%;
+    --sidebar-accent-foreground: 30 15% 88%;
+    --sidebar-border: 20 10% 10%;
+    --sidebar-ring: 25 85% 55%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(185 70% 50%), hsl(200 80% 55%));
-    --gradient-surface: linear-gradient(180deg, hsl(220 18% 12%), hsl(220 20% 8%));
-    --gradient-glow: radial-gradient(ellipse at center, hsl(185 70% 50% / 0.15), transparent 70%);
-    --gradient-card: linear-gradient(135deg, hsl(220 18% 13%), hsl(220 20% 10%));
+    --gradient-primary: linear-gradient(135deg, hsl(25 85% 55%), hsl(35 90% 60%));
+    --gradient-surface: linear-gradient(180deg, hsl(20 12% 10%), hsl(20 15% 6%));
+    --gradient-glow: radial-gradient(ellipse at center, hsl(25 85% 55% / 0.15), transparent 70%);
+    --gradient-card: linear-gradient(135deg, hsl(20 12% 10%), hsl(20 15% 7%));
 
     /* Shadows */
-    --shadow-sm: 0 2px 8px -2px hsl(220 50% 3% / 0.5);
-    --shadow-md: 0 4px 16px -4px hsl(220 50% 3% / 0.6);
-    --shadow-lg: 0 8px 32px -8px hsl(220 50% 3% / 0.7);
-    --shadow-glow: 0 0 40px -10px hsl(185 70% 50% / 0.3);
+    --shadow-sm: 0 2px 8px -2px hsl(20 30% 3% / 0.5);
+    --shadow-md: 0 4px 16px -4px hsl(20 30% 3% / 0.6);
+    --shadow-lg: 0 8px 32px -8px hsl(20 30% 3% / 0.7);
+    --shadow-glow: 0 0 40px -10px hsl(25 85% 55% / 0.3);
   }
 }
 
