@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAI } from "@/hooks/use-ai";
+import mnemosyneLogo from "@/assets/mnemosyne-logo.png";
 
 interface NavItem {
   icon: React.ElementType;
@@ -68,9 +69,11 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-primary shadow-glow">
-          <span className="text-lg font-bold text-primary-foreground">M</span>
-        </div>
+        <img 
+          src={mnemosyneLogo} 
+          alt="Mnemosyne" 
+          className="w-10 h-10 object-contain"
+        />
         {!collapsed && (
           <div className="flex flex-col">
             <span className="font-semibold text-foreground text-sm tracking-tight">Mnemosyne</span>
