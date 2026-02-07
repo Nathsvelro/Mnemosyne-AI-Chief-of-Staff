@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import type { EntityType } from "@/types/database";
-import { Users, Briefcase, Target, FileText, FileCode, ZoomIn, ZoomOut, Maximize2, Search } from "lucide-react";
+import { Search, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -15,6 +15,7 @@ export interface GraphNode {
   vy?: number;
   connections?: string[];
   teamId?: string;
+  avatarUrl?: string;
   metadata?: {
     role?: string;
     status?: "active" | "pending" | "resolved";
@@ -39,25 +40,18 @@ interface KnowledgeGraphProps {
   viewMode?: "flow" | "bottlenecks" | "diff";
 }
 
-const nodeColors: Record<EntityType, { hue: string; label: string }> = {
-  person: { hue: "190 90% 50%", label: "People" },
-  team: { hue: "280 70% 60%", label: "Teams" },
-  decision: { hue: "145 70% 45%", label: "Decisions" },
-  topic: { hue: "45 90% 55%", label: "Topics" },
-  document: { hue: "210 80% 60%", label: "Documents" },
+// Color scheme matching Kumu.io style
+const nodeColors: Record<EntityType, { bg: string; border: string; label: string }> = {
+  person: { bg: "#3b82f6", border: "#60a5fa", label: "People" },       // Blue
+  team: { bg: "#22c55e", border: "#4ade80", label: "Organizations" },  // Green
+  decision: { bg: "#f59e0b", border: "#fbbf24", label: "Decisions" },  // Amber
+  topic: { bg: "#8b5cf6", border: "#a78bfa", label: "Topics" },        // Purple
+  document: { bg: "#06b6d4", border: "#22d3ee", label: "Documents" },  // Cyan
 };
 
-const nodeIcons: Record<EntityType, typeof Users> = {
-  person: Users,
-  team: Briefcase,
-  decision: FileText,
-  topic: Target,
-  document: FileCode,
-};
-
-// Extended default nodes with team assignments and metadata
+// Extended default nodes with realistic data
 const defaultNodes: GraphNode[] = [
-  // Executive Team
+  // Executive Team (larger nodes as organizations)
   { id: "ceo-1", label: "Nathaniel Velazquez", type: "person", teamId: "team-exec", connections: ["team-exec", "vp-eng", "vp-prod", "vp-sales", "vp-mktg", "decision-strategy"], metadata: { role: "CEO", loadScore: 95, isBottleneck: true } },
   
   // VPs and Directors
@@ -90,7 +84,7 @@ const defaultNodes: GraphNode[] = [
   { id: "mktg-1", label: "Rachel Green", type: "person", teamId: "team-mktg", connections: ["vp-mktg", "team-mktg", "topic-launch", "topic-growth"], metadata: { role: "Content Lead", loadScore: 58 } },
   { id: "mktg-2", label: "Daniel Wright", type: "person", teamId: "team-mktg", connections: ["vp-mktg", "team-mktg", "topic-growth"], metadata: { role: "Growth Manager", loadScore: 67 } },
   
-  // Teams
+  // Teams (larger organization nodes)
   { id: "team-exec", label: "Executive", type: "team", connections: ["ceo-1", "decision-strategy", "topic-growth"], metadata: { description: "Leadership Team" } },
   { id: "team-eng", label: "Engineering", type: "team", connections: ["vp-eng", "eng-lead-1", "eng-lead-2", "eng-3", "eng-5", "topic-ai", "topic-infra"], metadata: { description: "Core product development" } },
   { id: "team-prod", label: "Product", type: "team", connections: ["vp-prod", "pm-1", "pm-2", "team-eng", "team-design", "topic-launch"], metadata: { description: "Product strategy and roadmap" } },
@@ -99,7 +93,7 @@ const defaultNodes: GraphNode[] = [
   { id: "team-sales", label: "Sales", type: "team", connections: ["vp-sales", "sales-1", "sales-2", "topic-enterprise", "decision-pricing"], metadata: { description: "Revenue and partnerships" } },
   { id: "team-platform", label: "Platform", type: "team", connections: ["eng-4", "topic-infra", "decision-security"], metadata: { description: "Infrastructure and DevOps" } },
   
-  // Key Decisions
+  // Key Decisions (amber/yellow nodes)
   { id: "decision-nextjs", label: "Adopt Next.js", type: "decision", connections: ["vp-eng", "eng-lead-1", "team-eng", "topic-launch"], metadata: { status: "active", confidence: 0.92 } },
   { id: "decision-launch", label: "Launch March 15", type: "decision", connections: ["vp-prod", "vp-mktg", "pm-1", "topic-launch", "decision-pricing"], metadata: { status: "pending", confidence: 0.75, hasConflict: true } },
   { id: "decision-api", label: "Deprecate API v1", type: "decision", connections: ["vp-eng", "eng-lead-2", "doc-api", "topic-enterprise"], metadata: { status: "active", confidence: 0.95 } },
@@ -107,9 +101,8 @@ const defaultNodes: GraphNode[] = [
   { id: "decision-strategy", label: "2025 Strategy", type: "decision", connections: ["ceo-1", "team-exec", "topic-ai", "topic-growth"], metadata: { status: "active", confidence: 0.88 } },
   { id: "decision-ai-model", label: "Use GPT-4", type: "decision", connections: ["vp-eng", "topic-ai", "eng-3"], metadata: { status: "active", confidence: 0.88 } },
   { id: "decision-security", label: "SOC2 Compliance", type: "decision", connections: ["eng-4", "topic-enterprise", "doc-security", "team-platform"], metadata: { status: "pending", confidence: 0.82 } },
-  { id: "decision-remote", label: "Remote-First Policy", type: "decision", connections: ["ceo-1", "team-exec"], metadata: { status: "active", confidence: 0.90 } },
   
-  // Topics
+  // Topics (purple nodes)
   { id: "topic-launch", label: "Q1 Launch", type: "topic", connections: ["decision-launch", "decision-nextjs", "team-mktg", "team-prod", "mktg-1"], metadata: { description: "Product launch for Q1 2025" } },
   { id: "topic-ai", label: "AI Strategy", type: "topic", connections: ["vp-eng", "eng-3", "decision-ai-model", "decision-strategy", "team-eng"], metadata: { description: "AI/ML integration strategy" } },
   { id: "topic-enterprise", label: "Enterprise", type: "topic", connections: ["vp-sales", "pm-2", "sales-1", "sales-2", "decision-pricing", "decision-api", "decision-security"], metadata: { description: "Enterprise sales & features" } },
@@ -117,17 +110,14 @@ const defaultNodes: GraphNode[] = [
   { id: "topic-infra", label: "Infrastructure", type: "topic", connections: ["eng-lead-2", "eng-4", "team-platform"], metadata: { description: "Platform & scalability" } },
   { id: "topic-growth", label: "Growth", type: "topic", connections: ["team-mktg", "team-sales", "vp-mktg", "mktg-2", "decision-strategy"], metadata: { description: "User acquisition & retention" } },
   
-  // Documents
+  // Documents (cyan nodes)
   { id: "doc-launch", label: "Q1 Launch Plan", type: "document", connections: ["vp-prod", "topic-launch", "decision-launch"], metadata: { status: "active" } },
   { id: "doc-api", label: "API Migration Guide", type: "document", connections: ["eng-lead-1", "decision-api", "topic-enterprise"], metadata: { status: "pending" } },
   { id: "doc-security", label: "Security Requirements", type: "document", connections: ["eng-4", "decision-security", "topic-enterprise"], metadata: { status: "active" } },
-  { id: "doc-pricing", label: "Pricing Analysis", type: "document", connections: ["vp-sales", "decision-pricing", "pm-2"], metadata: { status: "pending" } },
-  { id: "doc-ai-eval", label: "AI Model Evaluation", type: "document", connections: ["eng-3", "decision-ai-model", "topic-ai"], metadata: { status: "resolved" } },
-  { id: "doc-brand", label: "Brand Guidelines", type: "document", connections: ["team-mktg", "team-design", "vp-design"], metadata: { status: "active" } },
 ];
 
-// Get all connected node IDs recursively (up to depth)
-function getConnectedNodes(nodeId: string, allNodes: GraphNode[], depth: number = 1): Set<string> {
+// Get all connected node IDs recursively
+function getConnectedNodes(nodeId: string, allNodes: GraphNode[], depth: number = 2): Set<string> {
   const connected = new Set<string>([nodeId]);
   
   const expand = (ids: string[], currentDepth: number) => {
@@ -144,7 +134,6 @@ function getConnectedNodes(nodeId: string, allNodes: GraphNode[], depth: number 
           }
         });
       }
-      // Also find nodes that connect TO this node
       allNodes.forEach(n => {
         if (n.connections?.includes(id) && !connected.has(n.id)) {
           connected.add(n.id);
@@ -162,7 +151,7 @@ function getConnectedNodes(nodeId: string, allNodes: GraphNode[], depth: number 
   return connected;
 }
 
-// Force-directed layout simulation
+// Force-directed layout
 function useForceLayout(
   initialNodes: GraphNode[],
   dimensions: { width: number; height: number },
@@ -178,7 +167,6 @@ function useForceLayout(
     const centerX = dimensions.width / 2;
     const centerY = dimensions.height / 2;
     
-    // Find center node and position it at center
     const centerNode = centerNodeId ? initialNodes.find(n => n.id === centerNodeId) : null;
     
     const positioned = initialNodes.map((node, i) => {
@@ -186,26 +174,25 @@ function useForceLayout(
         return { ...node, x: centerX, y: centerY, vx: 0, vy: 0 };
       }
       
-      // If we have a center node, position connected nodes closer
       if (centerNode && centerNode.connections?.includes(node.id)) {
         const connectedIndex = centerNode.connections.indexOf(node.id);
         const angle = (connectedIndex / (centerNode.connections.length || 1)) * 2 * Math.PI;
-        const radius = 150;
+        const radius = 180;
         return {
           ...node,
-          x: centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 30,
-          y: centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * 30,
+          x: centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 40,
+          y: centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * 40,
           vx: 0,
           vy: 0,
         };
       }
       
       const angle = (i / initialNodes.length) * 2 * Math.PI;
-      const radius = Math.min(dimensions.width, dimensions.height) * 0.38;
+      const radius = Math.min(dimensions.width, dimensions.height) * 0.35;
       return {
         ...node,
-        x: centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 80,
-        y: centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * 80,
+        x: centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 100,
+        y: centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * 100,
         vx: 0,
         vy: 0,
       };
@@ -216,27 +203,27 @@ function useForceLayout(
 
     const simulate = () => {
       setNodes(prev => {
-        if (iterationRef.current > 200) return prev;
+        if (iterationRef.current > 250) return prev;
         iterationRef.current++;
 
-        const alpha = Math.max(0.005, 1 - iterationRef.current / 200);
+        const alpha = Math.max(0.001, 1 - iterationRef.current / 250);
         const newNodes = prev.map(node => ({ ...node }));
 
-        // Center gravity (stronger for center node)
+        // Center gravity
         newNodes.forEach(node => {
-          const centerForce = node.id === centerNodeId ? 0.003 : 0.0008;
+          const centerForce = node.id === centerNodeId ? 0.002 : 0.0005;
           node.vx! += (centerX - node.x!) * centerForce * alpha;
           node.vy! += (centerY - node.y!) * centerForce * alpha;
         });
 
-        // Repulsion between all nodes
+        // Repulsion
         for (let i = 0; i < newNodes.length; i++) {
           for (let j = i + 1; j < newNodes.length; j++) {
             const dx = newNodes[j].x! - newNodes[i].x!;
             const dy = newNodes[j].y! - newNodes[i].y!;
             const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            const minDist = 80;
-            const force = dist < minDist ? (200 * alpha) / (dist * dist) : (100 * alpha) / (dist * dist);
+            const minDist = 100;
+            const force = dist < minDist ? (300 * alpha) / (dist * dist) : (150 * alpha) / (dist * dist);
             
             newNodes[i].vx! -= (dx / dist) * force;
             newNodes[i].vy! -= (dy / dist) * force;
@@ -253,8 +240,8 @@ function useForceLayout(
               const dx = target.x! - node.x!;
               const dy = target.y! - node.y!;
               const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-              const idealDist = node.id === centerNodeId || target.id === centerNodeId ? 150 : 120;
-              const force = (dist - idealDist) * 0.015 * alpha;
+              const idealDist = node.id === centerNodeId || target.id === centerNodeId ? 180 : 140;
+              const force = (dist - idealDist) * 0.012 * alpha;
               
               node.vx! += (dx / dist) * force;
               node.vy! += (dy / dist) * force;
@@ -262,16 +249,15 @@ function useForceLayout(
           });
         });
 
-        // Apply velocities with damping
+        // Apply velocities
         newNodes.forEach(node => {
-          // Don't move center node as much
-          const damping = node.id === centerNodeId ? 0.6 : 0.85;
+          const damping = node.id === centerNodeId ? 0.5 : 0.8;
           node.vx! *= damping;
           node.vy! *= damping;
           node.x! += node.vx!;
           node.y! += node.vy!;
           
-          const padding = 70;
+          const padding = 80;
           node.x! = Math.max(padding, Math.min(dimensions.width - padding, node.x!));
           node.y! = Math.max(padding, Math.min(dimensions.height - padding, node.y!));
         });
@@ -279,7 +265,7 @@ function useForceLayout(
         return newNodes;
       });
 
-      if (iterationRef.current < 200) {
+      if (iterationRef.current < 250) {
         animationRef.current = requestAnimationFrame(simulate);
       }
     };
@@ -294,6 +280,32 @@ function useForceLayout(
   return nodes;
 }
 
+// Generate curved path between two points
+function getCurvedPath(x1: number, y1: number, x2: number, y2: number): string {
+  const midX = (x1 + x2) / 2;
+  const midY = (y1 + y2) / 2;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  
+  // Curve intensity based on distance
+  const curveIntensity = Math.min(dist * 0.15, 40);
+  
+  // Perpendicular offset for curve
+  const perpX = -dy / dist * curveIntensity;
+  const perpY = dx / dist * curveIntensity;
+  
+  const ctrlX = midX + perpX;
+  const ctrlY = midY + perpY;
+  
+  return `M ${x1} ${y1} Q ${ctrlX} ${ctrlY} ${x2} ${y2}`;
+}
+
+// Get initials from name
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
+
 export function KnowledgeGraph({
   nodes = defaultNodes,
   onNodeClick,
@@ -303,7 +315,6 @@ export function KnowledgeGraph({
   showConflictsOnly = false,
   showBottlenecksOnly = false,
   teamFilter,
-  viewMode = "flow",
 }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -330,496 +341,379 @@ export function KnowledgeGraph({
     return () => observer.disconnect();
   }, []);
 
-  // Apply all filters
+  // Apply filters
   const filteredNodes = useMemo(() => {
     let result = nodes;
     
-    // Apply node type filters
     if (nodeFilters) {
-      result = result.filter(n => nodeFilters[n.type] !== false);
+      result = result.filter(node => nodeFilters[node.type] !== false);
     }
     
-    // Apply team filter
-    if (teamFilter && teamFilter !== "all") {
-      const teamNode = nodes.find(n => n.id === teamFilter);
-      if (teamNode) {
-        const connectedToTeam = getConnectedNodes(teamFilter, nodes, 2);
-        result = result.filter(n => connectedToTeam.has(n.id));
-      }
-    }
-    
-    // Apply center node filter - show only connected nodes
-    if (centerNodeId) {
-      const connectedNodes = getConnectedNodes(centerNodeId, nodes, 2);
-      result = result.filter(n => connectedNodes.has(n.id));
-    }
-    
-    // Apply special filters
     if (showConflictsOnly) {
-      result = result.filter(n => n.metadata?.hasConflict || n.connections?.some(connId => {
-        const connNode = nodes.find(cn => cn.id === connId);
-        return connNode?.metadata?.hasConflict;
-      }));
+      const conflictNodeIds = new Set<string>();
+      result.forEach(node => {
+        if (node.metadata?.hasConflict) {
+          conflictNodeIds.add(node.id);
+          node.connections?.forEach(id => conflictNodeIds.add(id));
+        }
+      });
+      result = result.filter(node => conflictNodeIds.has(node.id));
     }
     
     if (showBottlenecksOnly) {
-      result = result.filter(n => 
-        n.metadata?.isBottleneck || 
-        (n.metadata?.loadScore && n.metadata.loadScore > 75)
-      );
+      const bottleneckNodeIds = new Set<string>();
+      result.forEach(node => {
+        if (node.metadata?.isBottleneck || (node.metadata?.loadScore && node.metadata.loadScore > 80)) {
+          bottleneckNodeIds.add(node.id);
+          node.connections?.forEach(id => bottleneckNodeIds.add(id));
+        }
+      });
+      result = result.filter(node => bottleneckNodeIds.has(node.id));
     }
     
-    // Apply search filter
+    if (teamFilter && teamFilter !== "all") {
+      const teamNodeIds = new Set<string>();
+      result.forEach(node => {
+        if (node.id === teamFilter || node.teamId === teamFilter) {
+          teamNodeIds.add(node.id);
+          node.connections?.forEach(id => teamNodeIds.add(id));
+        }
+      });
+      result = result.filter(node => teamNodeIds.has(node.id));
+    }
+    
+    if (centerNodeId) {
+      const connectedIds = getConnectedNodes(centerNodeId, result, 2);
+      result = result.filter(node => connectedIds.has(node.id));
+    }
+    
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(n => 
-        n.label.toLowerCase().includes(query) ||
-        n.type.toLowerCase().includes(query) ||
-        n.metadata?.role?.toLowerCase().includes(query)
+      result = result.filter(node => 
+        node.label.toLowerCase().includes(query) ||
+        node.metadata?.role?.toLowerCase().includes(query)
       );
     }
     
     return result;
-  }, [nodes, nodeFilters, teamFilter, centerNodeId, showConflictsOnly, showBottlenecksOnly, searchQuery]);
+  }, [nodes, nodeFilters, showConflictsOnly, showBottlenecksOnly, teamFilter, centerNodeId, searchQuery]);
 
-  const positionedNodes = useForceLayout(filteredNodes, dimensions, centerNodeId);
+  const layoutNodes = useForceLayout(filteredNodes, dimensions, centerNodeId);
 
-  // Generate edges only between filtered nodes
+  // Generate edges
   const edges = useMemo(() => {
-    const result: { from: GraphNode; to: GraphNode; type: string }[] = [];
-    const seen = new Set<string>();
-    const nodeIds = new Set(positionedNodes.map(n => n.id));
+    const edgeSet = new Set<string>();
+    const result: { from: GraphNode; to: GraphNode; key: string }[] = [];
     
-    positionedNodes.forEach((node) => {
-      node.connections?.forEach((targetId) => {
-        if (!nodeIds.has(targetId)) return;
-        const target = positionedNodes.find((n) => n.id === targetId);
+    layoutNodes.forEach(node => {
+      node.connections?.forEach(targetId => {
+        const target = layoutNodes.find(n => n.id === targetId);
         if (target) {
-          const edgeId = [node.id, targetId].sort().join("-");
-          if (!seen.has(edgeId)) {
-            seen.add(edgeId);
-            result.push({ from: node, to: target, type: "default" });
+          const key = [node.id, target.id].sort().join("-");
+          if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            result.push({ from: node, to: target, key });
           }
         }
       });
     });
     
     return result;
-  }, [positionedNodes]);
+  }, [layoutNodes]);
 
-  const handleNodeClick = useCallback((node: GraphNode, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedNode(node.id === selectedNode ? null : node.id);
-    onNodeClick?.(node);
-  }, [selectedNode, onNodeClick]);
+  // Zoom handlers
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setZoom(prev => Math.min(Math.max(prev * delta, 0.3), 3));
+  }, []);
 
-  const isNodeHighlighted = useCallback((nodeId: string) => {
-    if (!hoveredNode && !selectedNode) return true;
-    const activeNode = hoveredNode || selectedNode;
-    if (nodeId === activeNode) return true;
-    if (nodeId === centerNodeId) return true;
-    const node = positionedNodes.find((n) => n.id === activeNode);
-    return node?.connections?.includes(nodeId) ?? false;
-  }, [hoveredNode, selectedNode, positionedNodes, centerNodeId]);
-
-  const isEdgeHighlighted = useCallback((edge: { from: GraphNode; to: GraphNode }) => {
-    if (!hoveredNode && !selectedNode) return false;
-    const activeNode = hoveredNode || selectedNode;
-    return edge.from.id === activeNode || edge.to.id === activeNode;
-  }, [hoveredNode, selectedNode]);
-
-  const handleBackgroundClick = () => {
-    setSelectedNode(null);
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0 && e.target === e.currentTarget) {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'svg') {
       setIsDragging(true);
       lastPan.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
     }
-  };
+  }, [pan]);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isDragging) {
       setPan({
         x: e.clientX - lastPan.current.x,
         y: e.clientY - lastPan.current.y,
       });
     }
-  };
+  }, [isDragging]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
-
-  const handleZoom = (delta: number) => {
-    setZoom(prev => Math.max(0.3, Math.min(2.5, prev + delta)));
-  };
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    handleZoom(delta);
   }, []);
+
+  const handleNodeClick = (node: GraphNode) => {
+    setSelectedNode(node.id);
+    onNodeClick?.(node);
+  };
 
   const resetView = () => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
   };
 
+  // Get node size based on type and connections
   const getNodeSize = (node: GraphNode) => {
-    const baseSize = 24;
-    const connectionBonus = Math.min((node.connections?.length || 0) * 1.5, 14);
-    const centerBonus = node.id === centerNodeId ? 8 : 0;
-    const bottleneckBonus = node.metadata?.isBottleneck ? 4 : 0;
-    return baseSize + connectionBonus + centerBonus + bottleneckBonus;
-  };
-
-  const getNodeOpacity = (node: GraphNode) => {
-    if (viewMode === "bottlenecks") {
-      return node.metadata?.isBottleneck || (node.metadata?.loadScore && node.metadata.loadScore > 75) ? 1 : 0.3;
-    }
-    return 1;
+    const baseSize = node.type === 'team' ? 50 : node.type === 'person' ? 36 : 32;
+    const connectionBonus = Math.min((node.connections?.length || 0) * 2, 12);
+    return baseSize + connectionBonus;
   };
 
   return (
     <div
       ref={containerRef}
       className={cn(
-        "relative w-full h-full min-h-[500px] rounded-xl bg-gradient-card border border-border overflow-hidden select-none",
-        isDragging ? "cursor-grabbing" : "cursor-grab",
+        "relative w-full h-full overflow-hidden bg-[#1a1a2e] cursor-grab active:cursor-grabbing",
+        isDragging && "cursor-grabbing",
         className
       )}
+      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onClick={handleBackgroundClick}
-      onWheel={handleWheel}
     >
-      {/* Background pattern */}
-      <div className="absolute inset-0 bg-gradient-glow opacity-20 pointer-events-none" />
-      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-10">
-        <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-muted-foreground" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" />
-      </svg>
-
-      {/* Search bar */}
-      <div className="absolute top-4 left-4 z-20 w-56">
+      {/* Search Bar */}
+      <div className="absolute top-4 left-4 z-20 w-64">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
-            type="text"
-            placeholder="Search nodes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 bg-background/90 backdrop-blur-sm border-border"
+            placeholder="Search..."
+            className="pl-10 bg-[#252540] border-[#3a3a5c] text-white placeholder:text-gray-500"
           />
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
-        <Button variant="secondary" size="icon" className="h-8 w-8 bg-background/90 backdrop-blur-sm" onClick={() => handleZoom(0.2)}>
-          <ZoomIn className="w-4 h-4" />
+      {/* Zoom Controls */}
+      <div className="absolute top-4 right-4 z-20 flex flex-col gap-1">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 bg-[#252540] border-[#3a3a5c] hover:bg-[#3a3a5c]"
+          onClick={() => setZoom(z => Math.min(z * 1.2, 3))}
+        >
+          <ZoomIn className="w-4 h-4 text-gray-300" />
         </Button>
-        <Button variant="secondary" size="icon" className="h-8 w-8 bg-background/90 backdrop-blur-sm" onClick={() => handleZoom(-0.2)}>
-          <ZoomOut className="w-4 h-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 bg-[#252540] border-[#3a3a5c] hover:bg-[#3a3a5c]"
+          onClick={() => setZoom(z => Math.max(z * 0.8, 0.3))}
+        >
+          <ZoomOut className="w-4 h-4 text-gray-300" />
         </Button>
-        <Button variant="secondary" size="icon" className="h-8 w-8 bg-background/90 backdrop-blur-sm" onClick={resetView}>
-          <Maximize2 className="w-4 h-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 bg-[#252540] border-[#3a3a5c] hover:bg-[#3a3a5c]"
+          onClick={resetView}
+        >
+          <Maximize2 className="w-4 h-4 text-gray-300" />
         </Button>
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 flex flex-wrap gap-3 z-10 bg-background/90 backdrop-blur-sm rounded-lg p-3 border border-border">
-        {Object.entries(nodeColors).map(([type, { hue, label }]) => (
-          <div key={type} className="flex items-center gap-2">
-            <div
-              className="w-3 h-3 rounded-full ring-2 ring-white/20"
-              style={{ backgroundColor: `hsl(${hue})` }}
-            />
-            <span className="text-xs text-muted-foreground">{label}</span>
-          </div>
-        ))}
+      <div className="absolute bottom-4 left-4 z-20 bg-[#252540]/90 backdrop-blur-sm rounded-lg p-3 border border-[#3a3a5c]">
+        <div className="text-xs text-gray-400 mb-2 font-medium">Interlocks</div>
+        <div className="space-y-1.5">
+          {Object.entries(nodeColors).map(([type, colors]) => (
+            <div key={type} className="flex items-center gap-2">
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ backgroundColor: colors.bg }}
+              />
+              <span className="text-xs text-gray-300">{colors.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="absolute bottom-4 right-4 z-10 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
-        <span className="text-xs text-muted-foreground">
-          {positionedNodes.length} nodes • {edges.length} connections
-          {centerNodeId && ` • Focused on: ${nodes.find(n => n.id === centerNodeId)?.label}`}
+      {/* Stats Badge */}
+      <div className="absolute bottom-4 right-4 z-20 bg-[#252540]/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-[#3a3a5c]">
+        <span className="text-xs text-gray-400">
+          {layoutNodes.length} nodes • {edges.length} connections
         </span>
       </div>
 
-      {/* SVG Graph */}
+      {/* SVG Canvas */}
       <svg
         width={dimensions.width}
         height={dimensions.height}
         className="absolute inset-0"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-          transformOrigin: "center center",
-          transition: isDragging ? "none" : "transform 0.1s ease-out",
+          transformOrigin: 'center center',
         }}
       >
         <defs>
-          <filter id="node-glow" x="-100%" y="-100%" width="300%" height="300%">
-            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+          {/* Glow filter for highlighted nodes */}
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
             <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
             </feMerge>
           </filter>
-          <filter id="node-shadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
+          
+          {/* Drop shadow for nodes */}
+          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3"/>
           </filter>
-          <linearGradient id="edge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
-          </linearGradient>
         </defs>
 
         {/* Edges */}
-        <g>
-          {edges.map((edge, i) => {
-            const highlighted = isEdgeHighlighted(edge);
-            const bothVisible = isNodeHighlighted(edge.from.id) && isNodeHighlighted(edge.to.id);
+        <g className="edges">
+          {edges.map(({ from, to, key }) => {
+            if (!from.x || !from.y || !to.x || !to.y) return null;
+            
+            const isHighlighted = hoveredNode === from.id || hoveredNode === to.id ||
+                                  selectedNode === from.id || selectedNode === to.id;
             
             return (
-              <g key={i}>
-                {highlighted && (
-                  <line
-                    x1={edge.from.x}
-                    y1={edge.from.y}
-                    x2={edge.to.x}
-                    y2={edge.to.y}
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={5}
-                    strokeOpacity={0.25}
-                    strokeLinecap="round"
-                  />
-                )}
-                <line
-                  x1={edge.from.x}
-                  y1={edge.from.y}
-                  x2={edge.to.x}
-                  y2={edge.to.y}
-                  stroke={highlighted ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
-                  strokeWidth={highlighted ? 2.5 : 1.5}
-                  strokeOpacity={bothVisible ? (highlighted ? 0.9 : 0.3) : 0.15}
-                  strokeLinecap="round"
-                  className="transition-all duration-300"
-                />
-              </g>
+              <path
+                key={key}
+                d={getCurvedPath(from.x, from.y, to.x, to.y)}
+                fill="none"
+                stroke={isHighlighted ? "#60a5fa" : "#3a3a5c"}
+                strokeWidth={isHighlighted ? 2 : 1}
+                strokeOpacity={isHighlighted ? 0.8 : 0.4}
+                className="transition-all duration-200"
+              />
             );
           })}
         </g>
 
         {/* Nodes */}
-        <g>
-          {positionedNodes.map((node) => {
+        <g className="nodes">
+          {layoutNodes.map(node => {
+            if (!node.x || !node.y) return null;
+            
+            const size = getNodeSize(node);
+            const colors = nodeColors[node.type];
             const isSelected = selectedNode === node.id;
             const isHovered = hoveredNode === node.id;
-            const isCenter = node.id === centerNodeId;
-            const highlighted = isNodeHighlighted(node.id);
-            const { hue } = nodeColors[node.type];
-            const size = getNodeSize(node);
-            const Icon = nodeIcons[node.type];
-            const opacity = getNodeOpacity(node);
-
+            const isCenter = centerNodeId === node.id;
+            const isPerson = node.type === 'person';
+            
             return (
               <g
                 key={node.id}
                 transform={`translate(${node.x}, ${node.y})`}
-                onClick={(e) => handleNodeClick(node, e)}
+                onClick={() => handleNodeClick(node)}
                 onMouseEnter={() => setHoveredNode(node.id)}
                 onMouseLeave={() => setHoveredNode(null)}
                 className="cursor-pointer"
-                style={{
-                  opacity: highlighted ? opacity : 0.2,
-                  transition: "opacity 0.3s ease, transform 0.2s ease",
-                }}
+                style={{ filter: isSelected || isHovered ? 'url(#glow)' : 'url(#shadow)' }}
               >
-                {/* Center node indicator */}
-                {isCenter && (
+                {/* Outer ring for selected/hovered */}
+                {(isSelected || isHovered || isCenter) && (
                   <circle
-                    r={size + 20}
+                    r={size / 2 + 4}
                     fill="none"
-                    stroke="hsl(var(--primary))"
+                    stroke={isCenter ? "#22c55e" : colors.border}
                     strokeWidth={2}
-                    strokeDasharray="8 4"
-                    className="animate-spin"
-                    style={{ animationDuration: "20s" }}
+                    strokeOpacity={0.6}
+                    className="animate-pulse"
                   />
                 )}
-
-                {/* Selection/hover ring */}
-                {(isSelected || isHovered) && (
-                  <>
-                    <circle
-                      r={size + 14}
-                      fill="none"
-                      stroke={`hsl(${hue})`}
-                      strokeWidth={2}
-                      strokeOpacity={0.5}
-                      strokeDasharray={isSelected ? "none" : "4 4"}
-                      filter="url(#node-glow)"
-                    />
-                    <circle
-                      r={size + 7}
-                      fill={`hsl(${hue} / 0.15)`}
-                    />
-                  </>
-                )}
-
-                {/* Main node circle */}
+                
+                {/* Main circle */}
                 <circle
-                  r={size}
-                  fill={`hsl(${hue} / 0.25)`}
-                  stroke={`hsl(${hue})`}
-                  strokeWidth={isSelected ? 3 : 2}
-                  filter="url(#node-shadow)"
+                  r={size / 2}
+                  fill={colors.bg}
+                  stroke={colors.border}
+                  strokeWidth={2}
                   className="transition-all duration-200"
                 />
-
-                {/* Inner circle */}
-                <circle
-                  r={size * 0.6}
-                  fill={`hsl(${hue} / 0.7)`}
-                />
-
-                {/* Icon */}
-                <foreignObject
-                  x={-size * 0.4}
-                  y={-size * 0.4}
-                  width={size * 0.8}
-                  height={size * 0.8}
-                  className="pointer-events-none"
-                >
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Icon className="w-3/4 h-3/4 text-white drop-shadow-sm" strokeWidth={2.5} />
-                  </div>
-                </foreignObject>
-
-                {/* Label background */}
-                <rect
-                  x={-node.label.length * 3.2 - 8}
-                  y={size + 8}
-                  width={node.label.length * 6.4 + 16}
-                  height={20}
-                  rx={6}
-                  fill="hsl(var(--background) / 0.95)"
-                  stroke="hsl(var(--border))"
-                  strokeWidth={1}
-                  className="pointer-events-none"
-                />
-
-                {/* Label */}
-                <text
-                  y={size + 22}
-                  textAnchor="middle"
-                  className="text-[11px] font-medium fill-foreground pointer-events-none"
-                >
-                  {node.label}
-                </text>
-
-                {/* Status indicator */}
-                {node.metadata?.status && (
+                
+                {/* Inner content */}
+                {isPerson ? (
+                  // Person avatar with initials
+                  <text
+                    textAnchor="middle"
+                    dy="0.35em"
+                    fill="white"
+                    fontSize={size * 0.35}
+                    fontWeight="600"
+                    className="pointer-events-none select-none"
+                  >
+                    {getInitials(node.label)}
+                  </text>
+                ) : (
+                  // Icon or short label for other types
+                  <text
+                    textAnchor="middle"
+                    dy="0.35em"
+                    fill="white"
+                    fontSize={size * 0.28}
+                    fontWeight="600"
+                    className="pointer-events-none select-none"
+                  >
+                    {node.label.substring(0, 3).toUpperCase()}
+                  </text>
+                )}
+                
+                {/* Load score indicator for high-load people */}
+                {node.metadata?.loadScore && node.metadata.loadScore > 80 && (
                   <circle
-                    cx={size * 0.7}
-                    cy={-size * 0.7}
-                    r={7}
-                    fill={
-                      node.metadata.status === "active"
-                        ? "hsl(145 70% 45%)"
-                        : node.metadata.status === "pending"
-                        ? "hsl(45 90% 55%)"
-                        : "hsl(var(--muted-foreground))"
-                    }
-                    stroke="hsl(var(--background))"
+                    cx={size / 2 - 4}
+                    cy={-size / 2 + 4}
+                    r={6}
+                    fill="#ef4444"
+                    stroke="#1a1a2e"
                     strokeWidth={2}
                   />
                 )}
-
+                
                 {/* Conflict indicator */}
                 {node.metadata?.hasConflict && (
                   <circle
-                    cx={0}
-                    cy={-size - 8}
-                    r={8}
-                    fill="hsl(0 80% 55%)"
-                    stroke="hsl(var(--background))"
+                    cx={-size / 2 + 4}
+                    cy={-size / 2 + 4}
+                    r={6}
+                    fill="#f59e0b"
+                    stroke="#1a1a2e"
                     strokeWidth={2}
                   />
                 )}
-
-                {/* Load score indicator for persons */}
-                {node.type === "person" && node.metadata?.loadScore && node.metadata.loadScore > 75 && (
-                  <g>
-                    <circle
-                      cx={-size * 0.7}
-                      cy={-size * 0.7}
-                      r={7}
-                      fill={node.metadata.loadScore > 90 ? "hsl(0 80% 55%)" : "hsl(35 90% 55%)"}
-                      stroke="hsl(var(--background))"
-                      strokeWidth={2}
-                    />
-                    <text
-                      x={-size * 0.7}
-                      y={-size * 0.7 + 3}
-                      textAnchor="middle"
-                      className="text-[8px] font-bold fill-white pointer-events-none"
-                    >
-                      !
-                    </text>
-                  </g>
+                
+                {/* Label */}
+                <text
+                  y={size / 2 + 14}
+                  textAnchor="middle"
+                  fill="#e2e8f0"
+                  fontSize="11"
+                  fontWeight="500"
+                  className="pointer-events-none select-none"
+                >
+                  {node.label.length > 18 ? node.label.substring(0, 16) + '...' : node.label}
+                </text>
+                
+                {/* Role subtitle for people */}
+                {isPerson && node.metadata?.role && (
+                  <text
+                    y={size / 2 + 26}
+                    textAnchor="middle"
+                    fill="#94a3b8"
+                    fontSize="9"
+                    className="pointer-events-none select-none"
+                  >
+                    {node.metadata.role}
+                  </text>
                 )}
               </g>
             );
           })}
         </g>
       </svg>
-
-      {/* Tooltip for hovered node */}
-      {hoveredNode && !selectedNode && (
-        <div 
-          className="absolute z-30 pointer-events-none"
-          style={{
-            left: (positionedNodes.find(n => n.id === hoveredNode)?.x || 0) * zoom + pan.x + 60,
-            top: (positionedNodes.find(n => n.id === hoveredNode)?.y || 0) * zoom + pan.y - 30,
-          }}
-        >
-          {(() => {
-            const node = positionedNodes.find((n) => n.id === hoveredNode);
-            if (!node) return null;
-            return (
-              <div className="px-4 py-3 rounded-xl bg-popover/95 backdrop-blur-sm border border-border shadow-xl animate-in fade-in zoom-in-95 duration-150">
-                <p className="text-sm font-semibold text-foreground">{node.label}</p>
-                <p className="text-xs text-muted-foreground capitalize mt-0.5">
-                  {node.type}
-                  {node.metadata?.role && ` • ${node.metadata.role}`}
-                </p>
-                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                  <span>{node.connections?.length || 0} connections</span>
-                  {node.metadata?.loadScore && (
-                    <span className={node.metadata.loadScore > 80 ? "text-destructive" : ""}>
-                      {node.metadata.loadScore}% load
-                    </span>
-                  )}
-                </div>
-                {node.metadata?.hasConflict && (
-                  <p className="text-xs text-destructive mt-1 font-medium">⚠ Has active conflict</p>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      )}
     </div>
   );
 }
