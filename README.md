@@ -182,7 +182,7 @@ No broadcast spam. No blind CCs.
 
 ### 💡 Innovation Sprints
 
-![Local image](./images/Innovation Sprint.png)
+![Local image](./images/Innovation%20Sprint.png)
 
 **Purpose:** System-aware idea development.
 
@@ -203,7 +203,7 @@ Ideas are evaluated as **systems**, not isolated proposals.
 
 ## 🤖 AI Interaction Model
 
-![Local image](./images/Mnmosyne AI.)
+![Local image](./images/Mnmosyne%20AI.)
 
 Users interact via **Ask Mnemosyne**:
 - Text or voice input  
