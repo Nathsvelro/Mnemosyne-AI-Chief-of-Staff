@@ -485,11 +485,11 @@ serve(async (req) => {
   }
 
   try {
-    // Authenticate the request
+    // Authenticate the request - allow demo mode if no valid auth
     const auth = await authenticateRequest(req);
-    if (!auth) {
-      return unauthorizedResponse();
-    }
+    // Demo mode: if auth fails, continue with mock user context
+    const userId = auth?.userId || "demo_user";
+    const userEmail = auth?.email || "demo@mnemosyne.app";
 
     const body = await req.json();
     const message = validateString(body.message, "message", 10000);
