@@ -528,8 +528,8 @@ You have access to the organization's knowledge graph and can:
 - Compute routing targets for notifications
 
 Current context:
-- User ID: ${auth.userId}
-- User Email: ${auth.email || "unknown"}
+- User ID: ${userId}
+- User Email: ${userEmail}
 
 Retrieved context from knowledge base:
 ${contextBlock || "No relevant context found."}
